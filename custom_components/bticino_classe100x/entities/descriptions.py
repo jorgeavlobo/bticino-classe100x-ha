@@ -46,3 +46,6 @@ class BticinoSensorDescription(SensorEntityDescription):
 
     value_fn: Callable[[BticinoClasse100xCoordinator], Any]
     entity_category: EntityCategory | None = EntityCategory.DIAGNOSTIC
+    # Live measurements that are meaningless while the device is unreachable set
+    # this so the entity reports ``unavailable`` instead of a stale value.
+    requires_connection: bool = False
