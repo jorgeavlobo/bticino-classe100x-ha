@@ -1,5 +1,22 @@
 ﻿# Changelog
 
+## 0.0.6
+
+Health check diagnostics release.
+
+### Added
+
+- Added extensible health check framework.
+- Added entity registry checks.
+- Added restore state checks.
+- Added config entries checks.
+- Added device registry checks.
+- Added manifest checks.
+- Added translation checks.
+- Added YAML configuration checks.
+- Added Markdown report output.
+- Added reserved --fix flag for future automatic repairs.
+
 ## 0.0.5
 
 Entity registry compatibility release.
