@@ -1,0 +1,39 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BTicino CLASSE100X",
+        "description": "Configure SSH access to the BTicino CLASSE100X.",
+        "data": {
+          "host": "Host",
+          "username": "Username",
+          "auth_method": "Authentication method",
+          "ssh_key_path": "SSH private key path",
+          "password": "Password",
+          "command_timeout": "Command timeout",
+          "release_delay": "Release delay"
+        }
+      },
+      "init": {
+        "title": "BTicino CLASSE100X Options",
+        "description": "Update and test the BTicino CLASSE100X connection settings.",
+        "data": {
+          "host": "Host",
+          "username": "Username",
+          "auth_method": "Authentication method",
+          "ssh_key_path": "SSH private key path",
+          "password": "Password",
+          "command_timeout": "Command timeout",
+          "release_delay": "Release delay"
+        }
+      }
+    },
+    "error": {
+      "ssh_key_required": "The SSH private key path is required.",
+      "ssh_key_not_found": "The SSH private key file was not found.",
+      "password_auth_not_implemented": "Password authentication is not implemented yet.",
+      "cannot_connect": "Cannot connect to the BTicino CLASSE100X by SSH.",
+      "openwebnet_no_response": "SSH works, but OpenWebNet did not return a valid response."
+    }
+  }
+}
