@@ -86,6 +86,12 @@ def async_update_device_registry(
 
     The update is idempotent: nothing is written when the registry already holds
     the current values.
+
+    A MAC connection is only merged when no other device already owns it. This
+    avoids a ``DeviceConnectionCollisionError`` (which would repeat on every
+    poll) when a separate integration, such as a router, has already registered
+    the same MAC. In that situation Home Assistant merges the devices through the
+    normal ``device_info`` path when the CLASSE100X is reachable at startup.
     """
     device_registry = dr.async_get(hass)
     device = device_registry.async_get_device(identifiers={(DOMAIN, host)})
@@ -98,7 +104,9 @@ def async_update_device_registry(
     if mac_address:
         connection = (CONNECTION_NETWORK_MAC, format_mac(mac_address))
         if connection not in device.connections:
-            changes["merge_connections"] = {connection}
+            owner = device_registry.async_get_device(connections={connection})
+            if owner is None or owner.id == device.id:
+                changes["merge_connections"] = {connection}
 
     sw_version = _resolve_sw_version(coordinator)
     if sw_version and device.sw_version != sw_version:
