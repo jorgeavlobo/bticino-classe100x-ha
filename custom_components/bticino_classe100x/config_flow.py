@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigEntry, ConfigFlowResult
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.selector import (
@@ -36,6 +36,13 @@ from .api.openwebnet import (
     BticinoOpenWebNetClient,
     BticinoOpenWebNetError,
 )
+
+if TYPE_CHECKING:
+    # ``ConfigFlowResult`` is only needed for type checking. Importing it at
+    # runtime would break older Home Assistant versions that do not export it
+    # yet, so it is kept behind ``TYPE_CHECKING`` (annotations are strings via
+    # ``from __future__ import annotations``).
+    from homeassistant.config_entries import ConfigFlowResult
 
 
 async def _file_exists(hass: HomeAssistant, file_path: str) -> bool:
