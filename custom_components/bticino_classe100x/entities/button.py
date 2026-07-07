@@ -8,11 +8,10 @@ import logging
 from homeassistant.components import persistent_notification
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..api.openwebnet import BticinoOpenWebNetError
 from ..const import (
@@ -25,7 +24,7 @@ from ..const import (
     PEDESTRIAN_DOOR_RELEASE_COMMAND,
 )
 from ..coordinator import BticinoClasse100xCoordinator
-from ..device import build_device_info
+from .base import BticinoClasse100xEntity, get_host_from_entry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,17 +34,16 @@ class BticinoButtonDescription:
     """Description of a BTicino CLASSE100X button entity."""
 
     key: str
-    name: str
     icon: str
     button_type: str
     press_command: str | None = None
     release_command: str | None = None
+    entity_category: EntityCategory | None = None
 
 
 BUTTON_DESCRIPTIONS: tuple[BticinoButtonDescription, ...] = (
     BticinoButtonDescription(
         key="condominium_gate",
-        name="Condominium Gate",
         icon="mdi:gate",
         button_type=BUTTON_TYPE_COMMAND,
         press_command=CONDOMINIUM_GATE_PRESS_COMMAND,
@@ -53,7 +51,6 @@ BUTTON_DESCRIPTIONS: tuple[BticinoButtonDescription, ...] = (
     ),
     BticinoButtonDescription(
         key="pedestrian_door",
-        name="Pedestrian Door",
         icon="mdi:door",
         button_type=BUTTON_TYPE_COMMAND,
         press_command=PEDESTRIAN_DOOR_PRESS_COMMAND,
@@ -61,9 +58,9 @@ BUTTON_DESCRIPTIONS: tuple[BticinoButtonDescription, ...] = (
     ),
     BticinoButtonDescription(
         key="test_ssh_connection",
-        name="Test SSH Connection",
         icon="mdi:lan-check",
         button_type=BUTTON_TYPE_TEST,
+        entity_category=EntityCategory.DIAGNOSTIC,
     ),
 )
 
@@ -75,12 +72,13 @@ async def async_setup_entry(
 ) -> None:
     """Set up BTicino CLASSE100X buttons from a config entry."""
     coordinator: BticinoClasse100xCoordinator = hass.data[DOMAIN][entry.entry_id]
+    host = get_host_from_entry(entry)
 
     async_add_entities(
         [
             BticinoClasse100xButton(
                 coordinator=coordinator,
-                host=entry.data[CONF_HOST],
+                host=host,
                 description=description,
             )
             for description in BUTTON_DESCRIPTIONS
@@ -88,13 +86,8 @@ async def async_setup_entry(
     )
 
 
-class BticinoClasse100xButton(
-    CoordinatorEntity[BticinoClasse100xCoordinator],
-    ButtonEntity,
-):
+class BticinoClasse100xButton(BticinoClasse100xEntity, ButtonEntity):
     """Representation of a BTicino CLASSE100X button."""
-
-    _attr_has_entity_name = False
 
     def __init__(
         self,
@@ -103,15 +96,15 @@ class BticinoClasse100xButton(
         description: BticinoButtonDescription,
     ) -> None:
         """Initialize the BTicino CLASSE100X button."""
-        super().__init__(coordinator)
+        super().__init__(
+            coordinator=coordinator,
+            host=host,
+            key=description.key,
+            icon=description.icon,
+            entity_category=description.entity_category,
+        )
 
-        self._host = host
         self._description = description
-
-        self._attr_name = description.name
-        self._attr_icon = description.icon
-        self._attr_unique_id = f"{DOMAIN}_{host}_{description.key}"
-        self._attr_suggested_object_id = f"{DOMAIN}_{description.key}"
 
     @property
     def available(self) -> bool:
@@ -120,11 +113,6 @@ class BticinoClasse100xButton(
             return True
 
         return bool(self.coordinator.data)
-
-    @property
-    def device_info(self):
-        """Return device information for the BTicino CLASSE100X."""
-        return build_device_info(self.coordinator, self._host)
 
     async def async_press(self) -> None:
         """Press the BTicino button."""

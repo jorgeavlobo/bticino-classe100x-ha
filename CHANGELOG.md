@@ -1,5 +1,18 @@
 ﻿# Changelog
 
+## 0.0.4
+
+Home Assistant compliance release.
+
+### Changed
+
+- Enabled modern Home Assistant entity naming.
+- Added translation keys for BTicino entities.
+- Added English, French and Portuguese entity translations.
+- Added diagnostic entity categories.
+- Added duration device class and measurement state class to latency sensors.
+- Removed hardcoded entity names from Python entity descriptions.
+
 ## 0.0.3
 
 Entity ID cleanup release.

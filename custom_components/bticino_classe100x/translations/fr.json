@@ -1,0 +1,95 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BTicino CLASSE100X",
+        "description": "Configurer l'accès SSH au BTicino CLASSE100X.",
+        "data": {
+          "host": "Hôte",
+          "username": "Nom d'utilisateur",
+          "auth_method": "Méthode d'authentification",
+          "ssh_key_path": "Chemin de la clé privée SSH",
+          "password": "Mot de passe",
+          "command_timeout": "Délai d'expiration des commandes",
+          "release_delay": "Délai de relâchement"
+        }
+      },
+      "init": {
+        "title": "Options BTicino CLASSE100X",
+        "description": "Mettre à jour et tester les paramètres de connexion du BTicino CLASSE100X.",
+        "data": {
+          "host": "Hôte",
+          "username": "Nom d'utilisateur",
+          "auth_method": "Méthode d'authentification",
+          "ssh_key_path": "Chemin de la clé privée SSH",
+          "password": "Mot de passe",
+          "command_timeout": "Délai d'expiration des commandes",
+          "release_delay": "Délai de relâchement"
+        }
+      }
+    },
+    "error": {
+      "ssh_key_required": "Le chemin de la clé privée SSH est obligatoire.",
+      "ssh_key_not_found": "Le fichier de clé privée SSH est introuvable.",
+      "password_auth_not_implemented": "L'authentification par mot de passe n'est pas encore implémentée.",
+      "cannot_connect": "Impossible de se connecter au BTicino CLASSE100X par SSH.",
+      "openwebnet_no_response": "SSH fonctionne, mais OpenWebNet n'a pas renvoyé de réponse valide."
+    }
+  },
+  "entity": {
+    "button": {
+      "condominium_gate": {
+        "name": "Portail de copropriété"
+      },
+      "pedestrian_door": {
+        "name": "Porte piétonne"
+      },
+      "test_ssh_connection": {
+        "name": "Tester la connexion SSH"
+      }
+    },
+    "binary_sensor": {
+      "connection_status": {
+        "name": "État de la connexion"
+      }
+    },
+    "sensor": {
+      "health_status": {
+        "name": "État de santé"
+      },
+      "ssh_latency": {
+        "name": "Latence SSH"
+      },
+      "openwebnet_latency": {
+        "name": "Latence OpenWebNet"
+      },
+      "firmware_version": {
+        "name": "Version du micrologiciel"
+      },
+      "os_release": {
+        "name": "Version du système"
+      },
+      "uptime": {
+        "name": "Temps de fonctionnement"
+      },
+      "hostname": {
+        "name": "Nom d'hôte"
+      },
+      "mac_address": {
+        "name": "Adresse MAC"
+      },
+      "last_test_result": {
+        "name": "Dernier résultat de test"
+      },
+      "last_successful_test": {
+        "name": "Dernier test réussi"
+      },
+      "last_failed_test_status": {
+        "name": "État du dernier échec"
+      },
+      "last_failed_test": {
+        "name": "Dernier test échoué"
+      }
+    }
+  }
+}

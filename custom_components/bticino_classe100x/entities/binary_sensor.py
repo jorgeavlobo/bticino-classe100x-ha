@@ -7,14 +7,13 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import DOMAIN
 from ..coordinator import BticinoClasse100xCoordinator
-from ..device import build_device_info
+from .base import BticinoClasse100xEntity, get_host_from_entry
 
 
 async def async_setup_entry(
@@ -24,27 +23,25 @@ async def async_setup_entry(
 ) -> None:
     """Set up BTicino CLASSE100X binary sensors."""
     coordinator: BticinoClasse100xCoordinator = hass.data[DOMAIN][entry.entry_id]
+    host = get_host_from_entry(entry)
 
     async_add_entities(
         [
             BticinoClasse100xConnectionSensor(
                 coordinator=coordinator,
-                host=entry.data[CONF_HOST],
+                host=host,
             )
         ]
     )
 
 
 class BticinoClasse100xConnectionSensor(
-    CoordinatorEntity[BticinoClasse100xCoordinator],
+    BticinoClasse100xEntity,
     BinarySensorEntity,
 ):
     """Connection status sensor for the BTicino CLASSE100X."""
 
-    _attr_name = "Connection Status"
-    _attr_icon = "mdi:connection"
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
-    _attr_has_entity_name = False
 
     def __init__(
         self,
@@ -52,11 +49,13 @@ class BticinoClasse100xConnectionSensor(
         host: str,
     ) -> None:
         """Initialize the connection sensor."""
-        super().__init__(coordinator)
-
-        self._host = host
-        self._attr_unique_id = f"{DOMAIN}_{host}_connection"
-        self._attr_suggested_object_id = f"{DOMAIN}_connection_status"
+        super().__init__(
+            coordinator=coordinator,
+            host=host,
+            key="connection_status",
+            icon="mdi:connection",
+            entity_category=EntityCategory.DIAGNOSTIC,
+        )
 
     @property
     def is_on(self) -> bool:
@@ -83,8 +82,3 @@ class BticinoClasse100xConnectionSensor(
             "firmware_version": device_information.firmware_version,
             "os_release": device_information.os_release,
         }
-
-    @property
-    def device_info(self):
-        """Return device information."""
-        return build_device_info(self.coordinator, self._host)

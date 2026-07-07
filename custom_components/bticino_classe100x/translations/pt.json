@@ -1,0 +1,95 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BTicino CLASSE100X",
+        "description": "Configurar o acesso SSH ao BTicino CLASSE100X.",
+        "data": {
+          "host": "Host",
+          "username": "Nome de utilizador",
+          "auth_method": "Método de autenticação",
+          "ssh_key_path": "Caminho da chave privada SSH",
+          "password": "Palavra-passe",
+          "command_timeout": "Tempo limite do comando",
+          "release_delay": "Atraso de libertação"
+        }
+      },
+      "init": {
+        "title": "Opções BTicino CLASSE100X",
+        "description": "Atualizar e testar as definições de ligação do BTicino CLASSE100X.",
+        "data": {
+          "host": "Host",
+          "username": "Nome de utilizador",
+          "auth_method": "Método de autenticação",
+          "ssh_key_path": "Caminho da chave privada SSH",
+          "password": "Palavra-passe",
+          "command_timeout": "Tempo limite do comando",
+          "release_delay": "Atraso de libertação"
+        }
+      }
+    },
+    "error": {
+      "ssh_key_required": "O caminho da chave privada SSH é obrigatório.",
+      "ssh_key_not_found": "O ficheiro da chave privada SSH não foi encontrado.",
+      "password_auth_not_implemented": "A autenticação por palavra-passe ainda não está implementada.",
+      "cannot_connect": "Não foi possível ligar ao BTicino CLASSE100X por SSH.",
+      "openwebnet_no_response": "O SSH funciona, mas o OpenWebNet não devolveu uma resposta válida."
+    }
+  },
+  "entity": {
+    "button": {
+      "condominium_gate": {
+        "name": "Portão do condomínio"
+      },
+      "pedestrian_door": {
+        "name": "Porta pedonal"
+      },
+      "test_ssh_connection": {
+        "name": "Testar ligação SSH"
+      }
+    },
+    "binary_sensor": {
+      "connection_status": {
+        "name": "Estado da ligação"
+      }
+    },
+    "sensor": {
+      "health_status": {
+        "name": "Estado geral"
+      },
+      "ssh_latency": {
+        "name": "Latência SSH"
+      },
+      "openwebnet_latency": {
+        "name": "Latência OpenWebNet"
+      },
+      "firmware_version": {
+        "name": "Versão do firmware"
+      },
+      "os_release": {
+        "name": "Versão do sistema"
+      },
+      "uptime": {
+        "name": "Tempo ligado"
+      },
+      "hostname": {
+        "name": "Nome do host"
+      },
+      "mac_address": {
+        "name": "Endereço MAC"
+      },
+      "last_test_result": {
+        "name": "Resultado do último teste"
+      },
+      "last_successful_test": {
+        "name": "Último teste com sucesso"
+      },
+      "last_failed_test_status": {
+        "name": "Estado da última falha"
+      },
+      "last_failed_test": {
+        "name": "Último teste falhado"
+      }
+    }
+  }
+}

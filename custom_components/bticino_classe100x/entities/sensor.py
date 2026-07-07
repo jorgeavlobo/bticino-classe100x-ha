@@ -10,16 +10,16 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
+    SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, UnitOfTime
+from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import DOMAIN
 from ..coordinator import BticinoClasse100xCoordinator
-from ..device import build_device_info
+from .base import BticinoClasse100xEntity, get_host_from_entry
 
 
 HEALTH_STATUS_HEALTHY = "Healthy"
@@ -34,6 +34,7 @@ class BticinoSensorDescription(SensorEntityDescription):
     """Description of a BTicino CLASSE100X sensor."""
 
     value_fn: Callable[[BticinoClasse100xCoordinator], Any]
+    entity_category: EntityCategory | None = EntityCategory.DIAGNOSTIC
 
 
 def _get_health_status(coordinator: BticinoClasse100xCoordinator) -> str:
@@ -70,76 +71,71 @@ def _parse_timestamp(value: str | None) -> datetime | None:
 
     return parsed
 
+
 def _last_failed_status(
     coordinator: BticinoClasse100xCoordinator,
 ) -> str:
     """Return a human readable failed-test status."""
-
     if coordinator.last_failed_test_time is None:
         return "Never"
 
     return "Failed"
 
+
 SENSOR_DESCRIPTIONS: tuple[BticinoSensorDescription, ...] = (
     BticinoSensorDescription(
         key="health_status",
-        name="Health Status",
         icon="mdi:heart-pulse",
         value_fn=_get_health_status,
     ),
     BticinoSensorDescription(
         key="ssh_latency",
-        name="SSH Latency",
         icon="mdi:lan",
         native_unit_of_measurement=UnitOfTime.MILLISECONDS,
         value_fn=lambda coordinator: coordinator.device_information.ssh_latency_ms,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     BticinoSensorDescription(
         key="openwebnet_latency",
-        name="OpenWebNet Latency",
         icon="mdi:connection",
         native_unit_of_measurement=UnitOfTime.MILLISECONDS,
         value_fn=lambda coordinator: coordinator.device_information.openwebnet_latency_ms,
+        device_class=SensorDeviceClass.DURATION,
+        state_class=SensorStateClass.MEASUREMENT,
     ),
     BticinoSensorDescription(
         key="firmware_version",
-        name="Firmware Version",
         icon="mdi:chip",
         value_fn=lambda coordinator: coordinator.device_information.firmware_version,
     ),
     BticinoSensorDescription(
         key="os_release",
-        name="OS Release",
         icon="mdi:linux",
         value_fn=lambda coordinator: coordinator.device_information.os_release,
     ),
     BticinoSensorDescription(
         key="uptime",
-        name="Uptime",
         icon="mdi:clock-outline",
         value_fn=lambda coordinator: coordinator.device_information.uptime,
     ),
     BticinoSensorDescription(
         key="hostname",
-        name="Hostname",
         icon="mdi:server",
         value_fn=lambda coordinator: coordinator.device_information.hostname,
     ),
     BticinoSensorDescription(
         key="mac_address",
-        name="MAC Address",
         icon="mdi:network-outline",
         value_fn=lambda coordinator: coordinator.device_information.mac_address,
     ),
     BticinoSensorDescription(
         key="last_test_result",
-        name="Last Test Result",
         icon="mdi:check-network-outline",
         value_fn=lambda coordinator: coordinator.last_test_result,
     ),
     BticinoSensorDescription(
         key="last_successful_test",
-        name="Last Successful Test",
         icon="mdi:check-circle-outline",
         device_class=SensorDeviceClass.TIMESTAMP,
         value_fn=lambda coordinator: _parse_timestamp(
@@ -148,13 +144,11 @@ SENSOR_DESCRIPTIONS: tuple[BticinoSensorDescription, ...] = (
     ),
     BticinoSensorDescription(
         key="last_failed_test_status",
-        name="Last Failed Status",
         icon="mdi:alert-circle-outline",
         value_fn=_last_failed_status,
     ),
     BticinoSensorDescription(
         key="last_failed_test",
-        name="Last Failed Test",
         icon="mdi:alert-circle-outline",
         device_class=SensorDeviceClass.TIMESTAMP,
         value_fn=lambda coordinator: _parse_timestamp(
@@ -171,12 +165,13 @@ async def async_setup_entry(
 ) -> None:
     """Set up BTicino CLASSE100X sensors."""
     coordinator: BticinoClasse100xCoordinator = hass.data[DOMAIN][entry.entry_id]
+    host = get_host_from_entry(entry)
 
     async_add_entities(
         [
             BticinoClasse100xSensor(
                 coordinator=coordinator,
-                host=entry.data[CONF_HOST],
+                host=host,
                 description=description,
             )
             for description in SENSOR_DESCRIPTIONS
@@ -185,12 +180,10 @@ async def async_setup_entry(
 
 
 class BticinoClasse100xSensor(
-    CoordinatorEntity[BticinoClasse100xCoordinator],
+    BticinoClasse100xEntity,
     SensorEntity,
 ):
     """Representation of a BTicino CLASSE100X sensor."""
-
-    _attr_has_entity_name = False
 
     def __init__(
         self,
@@ -199,21 +192,17 @@ class BticinoClasse100xSensor(
         description: BticinoSensorDescription,
     ) -> None:
         """Initialize the BTicino CLASSE100X sensor."""
-        super().__init__(coordinator)
+        super().__init__(
+            coordinator=coordinator,
+            host=host,
+            key=description.key,
+            icon=description.icon,
+            entity_category=description.entity_category,
+        )
 
-        self._host = host
         self.entity_description = description
-
-        self._attr_name = description.name
-        self._attr_unique_id = f"{DOMAIN}_{host}_{description.key}"
-        self._attr_suggested_object_id = f"{DOMAIN}_{description.key}"
 
     @property
     def native_value(self) -> Any:
         """Return the sensor native value."""
         return self.entity_description.value_fn(self.coordinator)
-
-    @property
-    def device_info(self):
-        """Return device information."""
-        return build_device_info(self.coordinator, self._host)
