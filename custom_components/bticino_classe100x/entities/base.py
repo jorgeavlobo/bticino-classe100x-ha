@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from homeassistant.const import CONF_HOST, EntityCategory
+from homeassistant.const import CONF_HOST
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import DOMAIN
@@ -11,37 +13,40 @@ from ..device import build_device_info
 
 
 class BticinoClasse100xEntity(CoordinatorEntity[BticinoClasse100xCoordinator]):
-    """Base entity for BTicino CLASSE100X entities."""
+    """Base entity for BTicino CLASSE100X entities.
+
+    Centralizes the metadata shared by every platform so the individual entity
+    classes only need to provide their entity description:
+
+    * the device host, taken from the coordinator's config entry;
+    * the stable unique ID and suggested object ID;
+    * the translation key used for the entity name;
+    * the shared device information.
+    """
 
     _attr_has_entity_name = True
 
     def __init__(
         self,
         coordinator: BticinoClasse100xCoordinator,
-        host: str,
-        key: str,
-        icon: str | None = None,
-        entity_category: EntityCategory | None = None,
-        unique_key: str | None = None,
+        description: EntityDescription,
     ) -> None:
         """Initialize the BTicino CLASSE100X base entity."""
         super().__init__(coordinator)
 
-        resolved_unique_key = unique_key or key
+        self.entity_description = description
+        self._host: str = coordinator.entry.data[CONF_HOST]
 
-        self._host = host
-        self._attr_icon = icon
-        self._attr_translation_key = key
-        self._attr_unique_id = f"{DOMAIN}_{host}_{resolved_unique_key}"
-        self._attr_suggested_object_id = f"{DOMAIN}_{key}"
-        self._attr_entity_category = entity_category
+        # Most entities derive their unique-id suffix from the translation key.
+        # The connection binary sensor keeps a legacy suffix that differs from
+        # its key, so a description may override it via ``unique_key``.
+        unique_key = getattr(description, "unique_key", None) or description.key
+
+        self._attr_translation_key = description.key
+        self._attr_unique_id = f"{DOMAIN}_{self._host}_{unique_key}"
+        self._attr_suggested_object_id = f"{DOMAIN}_{description.key}"
 
     @property
-    def device_info(self):
+    def device_info(self) -> DeviceInfo:
         """Return device information."""
         return build_device_info(self.coordinator, self._host)
-
-
-def get_host_from_entry(entry) -> str:
-    """Return the configured host from a config entry."""
-    return entry.data[CONF_HOST]

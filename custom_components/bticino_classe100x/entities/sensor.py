@@ -17,7 +17,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from ..const import DOMAIN, TEST_RESULT_FAILED, TEST_RESULT_SUCCESS
 from ..coordinator import BticinoClasse100xCoordinator
-from .base import BticinoClasse100xEntity, get_host_from_entry
+from .base import BticinoClasse100xEntity
 from .descriptions import BticinoSensorDescription
 
 
@@ -181,17 +181,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up BTicino CLASSE100X sensors."""
     coordinator: BticinoClasse100xCoordinator = hass.data[DOMAIN][entry.entry_id]
-    host = get_host_from_entry(entry)
 
     async_add_entities(
-        [
-            BticinoClasse100xSensor(
-                coordinator=coordinator,
-                host=host,
-                description=description,
-            )
-            for description in SENSOR_DESCRIPTIONS
-        ]
+        BticinoClasse100xSensor(coordinator, description)
+        for description in SENSOR_DESCRIPTIONS
     )
 
 
@@ -201,22 +194,7 @@ class BticinoClasse100xSensor(
 ):
     """Representation of a BTicino CLASSE100X sensor."""
 
-    def __init__(
-        self,
-        coordinator: BticinoClasse100xCoordinator,
-        host: str,
-        description: BticinoSensorDescription,
-    ) -> None:
-        """Initialize the BTicino CLASSE100X sensor."""
-        super().__init__(
-            coordinator=coordinator,
-            host=host,
-            key=description.key,
-            icon=description.icon,
-            entity_category=description.entity_category,
-        )
-
-        self.entity_description = description
+    entity_description: BticinoSensorDescription
 
     @property
     def native_value(self) -> Any:

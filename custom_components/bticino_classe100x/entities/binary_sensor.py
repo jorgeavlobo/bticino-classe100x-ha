@@ -13,7 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from ..const import DOMAIN
 from ..coordinator import BticinoClasse100xCoordinator
-from .base import BticinoClasse100xEntity, get_host_from_entry
+from .base import BticinoClasse100xEntity
 from .descriptions import BticinoBinarySensorDescription
 
 
@@ -60,17 +60,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up BTicino CLASSE100X binary sensors."""
     coordinator: BticinoClasse100xCoordinator = hass.data[DOMAIN][entry.entry_id]
-    host = get_host_from_entry(entry)
 
     async_add_entities(
-        [
-            BticinoClasse100xBinarySensor(
-                coordinator=coordinator,
-                host=host,
-                description=description,
-            )
-            for description in BINARY_SENSOR_DESCRIPTIONS
-        ]
+        BticinoClasse100xBinarySensor(coordinator, description)
+        for description in BINARY_SENSOR_DESCRIPTIONS
     )
 
 
@@ -80,23 +73,7 @@ class BticinoClasse100xBinarySensor(
 ):
     """Representation of a BTicino CLASSE100X binary sensor."""
 
-    def __init__(
-        self,
-        coordinator: BticinoClasse100xCoordinator,
-        host: str,
-        description: BticinoBinarySensorDescription,
-    ) -> None:
-        """Initialize the BTicino CLASSE100X binary sensor."""
-        super().__init__(
-            coordinator=coordinator,
-            host=host,
-            key=description.key,
-            icon=description.icon,
-            entity_category=description.entity_category,
-            unique_key=description.unique_key,
-        )
-
-        self.entity_description = description
+    entity_description: BticinoBinarySensorDescription
 
     @property
     def is_on(self) -> bool:
