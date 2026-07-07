@@ -11,6 +11,11 @@ from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from .const import (
     AUTH_METHOD_PASSWORD,
@@ -80,12 +85,19 @@ async def _validate_connection(hass: HomeAssistant, user_input: dict[str, Any]) 
     return None
 
 
-def _auth_method_selector() -> dict[str, str]:
-    """Return available authentication methods."""
-    return {
-        AUTH_METHOD_SSH_KEY: "SSH Private Key",
-        AUTH_METHOD_PASSWORD: "Password",
-    }
+def _auth_method_selector() -> SelectSelector:
+    """Return the authentication method selector.
+
+    The option labels are translated through the ``auth_method`` selector
+    translation key, so no user-visible strings are hardcoded here.
+    """
+    return SelectSelector(
+        SelectSelectorConfig(
+            options=[AUTH_METHOD_SSH_KEY, AUTH_METHOD_PASSWORD],
+            translation_key="auth_method",
+            mode=SelectSelectorMode.DROPDOWN,
+        )
+    )
 
 
 def _build_schema(defaults: dict[str, Any]) -> vol.Schema:
@@ -100,7 +112,7 @@ def _build_schema(defaults: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 CONF_AUTH_METHOD,
                 default=defaults.get(CONF_AUTH_METHOD, AUTH_METHOD_SSH_KEY),
-            ): vol.In(_auth_method_selector()),
+            ): _auth_method_selector(),
             vol.Optional(
                 CONF_SSH_KEY_PATH,
                 default=defaults.get(CONF_SSH_KEY_PATH, DEFAULT_SSH_KEY_PATH),
