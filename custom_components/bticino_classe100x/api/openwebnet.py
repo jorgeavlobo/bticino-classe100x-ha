@@ -16,9 +16,9 @@ from .ssh_client import (
 
 _LOGGER = logging.getLogger(__name__)
 
-# OpenWebNet is reached on the device itself through a local TCP socket, so the
-# commands are piped to netcat targeting the loopback gateway ("0") on the
-# standard OpenWebNet port.
+# OpenWebNet runs on the device itself, so commands are piped to netcat over a
+# local TCP socket. Netcat accepts "0" as the host, which it resolves to the
+# local machine, on the standard OpenWebNet port.
 OPENWEBNET_HOST = "0"
 OPENWEBNET_PORT = 30006
 OPENWEBNET_STATUS_REQUEST = "*#*1##"
