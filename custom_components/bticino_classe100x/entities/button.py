@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import logging
 
 from homeassistant.components import persistent_notification
@@ -25,20 +24,9 @@ from ..const import (
 )
 from ..coordinator import BticinoClasse100xCoordinator
 from .base import BticinoClasse100xEntity, get_host_from_entry
+from .descriptions import BticinoButtonDescription
 
 _LOGGER = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True, slots=True)
-class BticinoButtonDescription:
-    """Description of a BTicino CLASSE100X button entity."""
-
-    key: str
-    icon: str
-    button_type: str
-    press_command: str | None = None
-    release_command: str | None = None
-    entity_category: EntityCategory | None = None
 
 
 BUTTON_DESCRIPTIONS: tuple[BticinoButtonDescription, ...] = (
