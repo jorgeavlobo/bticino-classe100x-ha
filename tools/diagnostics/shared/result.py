@@ -24,6 +24,7 @@ class HealthCheckResult:
     details: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    duration_ms: float | None = None
 
     @property
     def passed(self) -> bool:

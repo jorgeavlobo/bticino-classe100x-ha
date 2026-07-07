@@ -1,5 +1,18 @@
 ﻿# Changelog
 
+## 0.0.7
+
+Health check usability release.
+
+### Added
+
+- Added support for running individual health checks.
+- Added `--list` option to show available checks.
+- Added JSON report output.
+- Added GitHub issue friendly report output.
+- Added performance timing output.
+- Improved diagnostics tool documentation.
+
 ## 0.0.6
 
 Health check diagnostics release.
