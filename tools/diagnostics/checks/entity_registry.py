@@ -46,20 +46,21 @@ class EntityRegistryCheck(HealthCheck):
         errors: list[str] = []
         details: list[str] = []
 
+        bticino_entities = _find_bticino_entities(entities)
+
         entity_ids = [
             entity.get("entity_id")
-            for entity in entities
+            for entity in bticino_entities
             if entity.get("entity_id")
         ]
         unique_ids = [
             entity.get("unique_id")
-            for entity in entities
+            for entity in bticino_entities
             if entity.get("unique_id")
         ]
 
         duplicated_entity_ids = _find_duplicates(entity_ids)
         duplicated_unique_ids = _find_duplicates(unique_ids)
-        bticino_entities = _find_bticino_entities(entities)
 
         deprecated_entities = [
             entity.get("entity_id")
