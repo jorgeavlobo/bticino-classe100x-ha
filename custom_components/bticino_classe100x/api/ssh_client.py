@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 import os
 import subprocess
-import logging
-
 
 _LOGGER = logging.getLogger(__name__)
+
 
 @dataclass(slots=True)
 class BticinoConnectionConfig:

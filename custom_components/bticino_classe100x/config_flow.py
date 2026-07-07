@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
@@ -36,6 +36,13 @@ from .api.openwebnet import (
     BticinoOpenWebNetClient,
     BticinoOpenWebNetError,
 )
+
+if TYPE_CHECKING:
+    # ``ConfigFlowResult`` is only needed for type checking. Importing it at
+    # runtime would break older Home Assistant versions that do not export it
+    # yet, so it is kept behind ``TYPE_CHECKING`` (annotations are strings via
+    # ``from __future__ import annotations``).
+    from homeassistant.config_entries import ConfigFlowResult
 
 
 async def _file_exists(hass: HomeAssistant, file_path: str) -> bool:
@@ -136,11 +143,15 @@ class BticinoClasse100xConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     @staticmethod
-    def async_get_options_flow(config_entry: ConfigEntry):
+    def async_get_options_flow(
+        config_entry: ConfigEntry,
+    ) -> BticinoClasse100xOptionsFlow:
         """Create the options flow."""
         return BticinoClasse100xOptionsFlow(config_entry)
 
-    async def async_step_user(self, user_input: dict | None = None):
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the initial setup step."""
         errors: dict[str, str] = {}
 
@@ -183,7 +194,9 @@ class BticinoClasse100xOptionsFlow(config_entries.OptionsFlow):
         """Initialize the options flow."""
         self._config_entry = config_entry
 
-    async def async_step_init(self, user_input: dict | None = None):
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Manage BTicino CLASSE100X options."""
         errors: dict[str, str] = {}
 

@@ -11,11 +11,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
+    AUTH_METHOD_SSH_KEY,
     CONF_AUTH_METHOD,
     CONF_COMMAND_TIMEOUT,
     CONF_PASSWORD,
     CONF_RELEASE_DELAY,
     CONF_SSH_KEY_PATH,
+    DEFAULT_COMMAND_TIMEOUT,
+    DEFAULT_RELEASE_DELAY,
     DOMAIN,
     TEST_RESULT_FAILED,
     TEST_RESULT_SUCCESS,
@@ -51,11 +54,11 @@ class BticinoClasse100xCoordinator(DataUpdateCoordinator[bool]):
         connection_config = BticinoConnectionConfig(
             host=config[CONF_HOST],
             username=config[CONF_USERNAME],
-            auth_method=config.get(CONF_AUTH_METHOD, "ssh_key"),
+            auth_method=config.get(CONF_AUTH_METHOD, AUTH_METHOD_SSH_KEY),
             ssh_key_path=config.get(CONF_SSH_KEY_PATH),
             password=config.get(CONF_PASSWORD),
-            command_timeout=config.get(CONF_COMMAND_TIMEOUT, 10),
-            release_delay=config.get(CONF_RELEASE_DELAY, 1.0),
+            command_timeout=config.get(CONF_COMMAND_TIMEOUT, DEFAULT_COMMAND_TIMEOUT),
+            release_delay=config.get(CONF_RELEASE_DELAY, DEFAULT_RELEASE_DELAY),
         )
 
         self.client = BticinoOpenWebNetClient(connection_config)
