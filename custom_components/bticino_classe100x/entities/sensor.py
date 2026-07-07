@@ -17,14 +17,29 @@ from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from ..const import DOMAIN
+from ..const import DOMAIN, TEST_RESULT_FAILED, TEST_RESULT_SUCCESS
 from ..coordinator import BticinoClasse100xCoordinator
 from .base import BticinoClasse100xEntity, get_host_from_entry
 
 
-HEALTH_STATUS_HEALTHY = "Healthy"
-HEALTH_STATUS_SLOW = "Slow"
-HEALTH_STATUS_OFFLINE = "Offline"
+# Sensor state values are slugs so Home Assistant can translate them through the
+# entity ``state`` translation keys. The user-visible labels live in the
+# translation files, not in Python.
+HEALTH_STATUS_HEALTHY = "healthy"
+HEALTH_STATUS_SLOW = "slow"
+HEALTH_STATUS_OFFLINE = "offline"
+
+HEALTH_STATUS_OPTIONS = [
+    HEALTH_STATUS_HEALTHY,
+    HEALTH_STATUS_SLOW,
+    HEALTH_STATUS_OFFLINE,
+]
+
+LAST_TEST_RESULT_OPTIONS = [TEST_RESULT_SUCCESS, TEST_RESULT_FAILED]
+
+FAILED_STATUS_NEVER = "never"
+FAILED_STATUS_FAILED = "failed"
+FAILED_STATUS_OPTIONS = [FAILED_STATUS_NEVER, FAILED_STATUS_FAILED]
 
 SLOW_LATENCY_THRESHOLD_MS = 2000
 
@@ -75,17 +90,23 @@ def _parse_timestamp(value: str | None) -> datetime | None:
 def _last_failed_status(
     coordinator: BticinoClasse100xCoordinator,
 ) -> str:
-    """Return a human readable failed-test status."""
-    if coordinator.last_failed_test_time is None:
-        return "Never"
+    """Return the failed-test status as an enum state slug.
 
-    return "Failed"
+    The returned value ("never"/"failed") is translated to a human-readable
+    label through the entity ``state`` translation keys.
+    """
+    if coordinator.last_failed_test_time is None:
+        return FAILED_STATUS_NEVER
+
+    return FAILED_STATUS_FAILED
 
 
 SENSOR_DESCRIPTIONS: tuple[BticinoSensorDescription, ...] = (
     BticinoSensorDescription(
         key="health_status",
         icon="mdi:heart-pulse",
+        device_class=SensorDeviceClass.ENUM,
+        options=HEALTH_STATUS_OPTIONS,
         value_fn=_get_health_status,
     ),
     BticinoSensorDescription(
@@ -132,6 +153,8 @@ SENSOR_DESCRIPTIONS: tuple[BticinoSensorDescription, ...] = (
     BticinoSensorDescription(
         key="last_test_result",
         icon="mdi:check-network-outline",
+        device_class=SensorDeviceClass.ENUM,
+        options=LAST_TEST_RESULT_OPTIONS,
         value_fn=lambda coordinator: coordinator.last_test_result,
     ),
     BticinoSensorDescription(
@@ -145,6 +168,8 @@ SENSOR_DESCRIPTIONS: tuple[BticinoSensorDescription, ...] = (
     BticinoSensorDescription(
         key="last_failed_test_status",
         icon="mdi:alert-circle-outline",
+        device_class=SensorDeviceClass.ENUM,
+        options=FAILED_STATUS_OPTIONS,
         value_fn=_last_failed_status,
     ),
     BticinoSensorDescription(

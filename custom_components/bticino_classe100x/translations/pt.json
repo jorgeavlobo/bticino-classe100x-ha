@@ -55,7 +55,12 @@
     },
     "sensor": {
       "health_status": {
-        "name": "Estado geral"
+        "name": "Estado geral",
+        "state": {
+          "healthy": "Saudável",
+          "slow": "Lento",
+          "offline": "Offline"
+        }
       },
       "ssh_latency": {
         "name": "Latência SSH"
@@ -79,16 +84,32 @@
         "name": "Endereço MAC"
       },
       "last_test_result": {
-        "name": "Resultado do último teste"
+        "name": "Resultado do último teste",
+        "state": {
+          "success": "Sucesso",
+          "failed": "Falhou"
+        }
       },
       "last_successful_test": {
         "name": "Último teste com sucesso"
       },
       "last_failed_test_status": {
-        "name": "Estado da última falha"
+        "name": "Estado da última falha",
+        "state": {
+          "never": "Nunca",
+          "failed": "Falhou"
+        }
       },
       "last_failed_test": {
         "name": "Último teste falhado"
+      }
+    }
+  },
+  "selector": {
+    "auth_method": {
+      "options": {
+        "ssh_key": "Chave privada SSH",
+        "password": "Palavra-passe"
       }
     }
   }

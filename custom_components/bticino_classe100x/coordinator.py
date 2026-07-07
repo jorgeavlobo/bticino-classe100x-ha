@@ -17,6 +17,8 @@ from .const import (
     CONF_RELEASE_DELAY,
     CONF_SSH_KEY_PATH,
     DOMAIN,
+    TEST_RESULT_FAILED,
+    TEST_RESULT_SUCCESS,
 )
 from .api.openwebnet import (
     BticinoConnectionConfig,
@@ -82,14 +84,14 @@ class BticinoClasse100xCoordinator(DataUpdateCoordinator[bool]):
             )
         except BticinoOpenWebNetError as exc:
             self.last_error = str(exc)
-            self.last_test_result = "failed"
+            self.last_test_result = TEST_RESULT_FAILED
             self.last_failed_test_time = self.last_test_time
             self.async_set_updated_data(False)
             return False
 
         if not is_connected:
             self.last_error = "OpenWebNet did not return a valid response"
-            self.last_test_result = "failed"
+            self.last_test_result = TEST_RESULT_FAILED
             self.last_failed_test_time = self.last_test_time
             self.async_set_updated_data(False)
             return False
@@ -103,7 +105,7 @@ class BticinoClasse100xCoordinator(DataUpdateCoordinator[bool]):
         )
 
         self.last_error = None
-        self.last_test_result = "success"
+        self.last_test_result = TEST_RESULT_SUCCESS
         self.last_successful_test_time = self.last_test_time
         self.async_set_updated_data(True)
 
@@ -119,19 +121,19 @@ class BticinoClasse100xCoordinator(DataUpdateCoordinator[bool]):
             )
         except BticinoOpenWebNetError as exc:
             self.last_error = str(exc)
-            self.last_test_result = "failed"
+            self.last_test_result = TEST_RESULT_FAILED
             self.last_failed_test_time = self.last_test_time
             _LOGGER.warning("BTicino CLASSE100X connection check failed: %s", exc)
             return False
 
         if not is_connected:
             self.last_error = "OpenWebNet did not return a valid response"
-            self.last_test_result = "failed"
+            self.last_test_result = TEST_RESULT_FAILED
             self.last_failed_test_time = self.last_test_time
             return False
 
         self.last_error = None
-        self.last_test_result = "success"
+        self.last_test_result = TEST_RESULT_SUCCESS
         self.last_successful_test_time = self.last_test_time
 
         self.device_information = await self.hass.async_add_executor_job(
