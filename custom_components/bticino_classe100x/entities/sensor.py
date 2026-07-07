@@ -17,7 +17,7 @@ from homeassistant.const import EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from ..const import DOMAIN
+from ..const import DOMAIN, TEST_RESULT_FAILED, TEST_RESULT_SUCCESS
 from ..coordinator import BticinoClasse100xCoordinator
 from .base import BticinoClasse100xEntity, get_host_from_entry
 
@@ -35,7 +35,7 @@ HEALTH_STATUS_OPTIONS = [
     HEALTH_STATUS_OFFLINE,
 ]
 
-LAST_TEST_RESULT_OPTIONS = ["success", "failed"]
+LAST_TEST_RESULT_OPTIONS = [TEST_RESULT_SUCCESS, TEST_RESULT_FAILED]
 
 FAILED_STATUS_NEVER = "never"
 FAILED_STATUS_FAILED = "failed"

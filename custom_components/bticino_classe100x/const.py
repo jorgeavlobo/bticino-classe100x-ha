@@ -25,6 +25,12 @@ BUTTON_TYPE_TEST = "test"
 
 OPENWEBNET_TEST_COMMAND = "*#*1##"
 
+# Connection test result values. Shared between the coordinator (which sets them)
+# and the sensor platform (which exposes them as translated enum states), so both
+# sides cannot drift apart.
+TEST_RESULT_SUCCESS = "success"
+TEST_RESULT_FAILED = "failed"
+
 CONDOMINIUM_GATE_PRESS_COMMAND = "*8*19*20##"
 CONDOMINIUM_GATE_RELEASE_COMMAND = "*8*20*20##"
 
