@@ -106,7 +106,7 @@ def render_github_report(results: list[HealthCheckResult]) -> int:
 
     for result in results:
         symbol = _github_symbol(result.status)
-        print(f"- {symbol} **{result.name}** — `{result.status.value}`")
+        print(f"- {symbol} **{result.name}** - `{result.status.value}`")
 
         if result.duration_ms is not None:
             print(f"  - Duration: `{result.duration_ms:.2f} ms`")
