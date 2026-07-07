@@ -96,6 +96,10 @@ SENSOR_DESCRIPTIONS: tuple[BticinoSensorDescription, ...] = (
     BticinoSensorDescription(
         key="health_status",
         icon="mdi:heart-pulse",
+        # The overall status is the primary indicator for the device, so it is
+        # kept out of the diagnostic category. It reports "offline" as its own
+        # state, so it stays available while the device is unreachable.
+        entity_category=None,
         device_class=SensorDeviceClass.ENUM,
         options=HEALTH_STATUS_OPTIONS,
         value_fn=_get_health_status,
@@ -107,6 +111,7 @@ SENSOR_DESCRIPTIONS: tuple[BticinoSensorDescription, ...] = (
         value_fn=lambda coordinator: coordinator.device_information.ssh_latency_ms,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
+        requires_connection=True,
     ),
     BticinoSensorDescription(
         key="openwebnet_latency",
@@ -115,30 +120,36 @@ SENSOR_DESCRIPTIONS: tuple[BticinoSensorDescription, ...] = (
         value_fn=lambda coordinator: coordinator.device_information.openwebnet_latency_ms,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
+        requires_connection=True,
     ),
     BticinoSensorDescription(
         key="firmware_version",
         icon="mdi:chip",
+        entity_registry_enabled_default=False,
         value_fn=lambda coordinator: coordinator.device_information.firmware_version,
     ),
     BticinoSensorDescription(
         key="os_release",
         icon="mdi:linux",
+        entity_registry_enabled_default=False,
         value_fn=lambda coordinator: coordinator.device_information.os_release,
     ),
     BticinoSensorDescription(
         key="uptime",
         icon="mdi:clock-outline",
+        entity_registry_enabled_default=False,
         value_fn=lambda coordinator: coordinator.device_information.uptime,
     ),
     BticinoSensorDescription(
         key="hostname",
         icon="mdi:server",
+        entity_registry_enabled_default=False,
         value_fn=lambda coordinator: coordinator.device_information.hostname,
     ),
     BticinoSensorDescription(
         key="mac_address",
         icon="mdi:network-outline",
+        entity_registry_enabled_default=False,
         value_fn=lambda coordinator: coordinator.device_information.mac_address,
     ),
     BticinoSensorDescription(
@@ -195,6 +206,18 @@ class BticinoClasse100xSensor(
     """Representation of a BTicino CLASSE100X sensor."""
 
     entity_description: BticinoSensorDescription
+
+    @property
+    def available(self) -> bool:
+        """Return whether the sensor has a meaningful value.
+
+        Live measurements are reported as unavailable while the device is
+        unreachable, instead of exposing the last (now stale) reading.
+        """
+        if self.entity_description.requires_connection and not self.coordinator.data:
+            return False
+
+        return super().available
 
     @property
     def native_value(self) -> Any:
