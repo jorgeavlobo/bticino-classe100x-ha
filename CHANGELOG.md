@@ -1,5 +1,14 @@
 ﻿# Changelog
 
+## 0.0.5
+
+Entity registry compatibility release.
+
+### Fixed
+
+- Restored the original unique ID for the connection status binary sensor.
+- Prevented duplicate connection status entities after upgrading to v0.0.4.
+
 ## 0.0.4
 
 Home Assistant compliance release.

@@ -55,6 +55,7 @@ class BticinoClasse100xConnectionSensor(
             key="connection_status",
             icon="mdi:connection",
             entity_category=EntityCategory.DIAGNOSTIC,
+            unique_key="connection",
         )
 
     @property

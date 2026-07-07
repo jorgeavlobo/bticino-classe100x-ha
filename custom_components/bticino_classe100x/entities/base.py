@@ -22,14 +22,17 @@ class BticinoClasse100xEntity(CoordinatorEntity[BticinoClasse100xCoordinator]):
         key: str,
         icon: str | None = None,
         entity_category: EntityCategory | None = None,
+        unique_key: str | None = None,
     ) -> None:
         """Initialize the BTicino CLASSE100X base entity."""
         super().__init__(coordinator)
 
+        resolved_unique_key = unique_key or key
+
         self._host = host
         self._attr_icon = icon
         self._attr_translation_key = key
-        self._attr_unique_id = f"{DOMAIN}_{host}_{key}"
+        self._attr_unique_id = f"{DOMAIN}_{host}_{resolved_unique_key}"
         self._attr_suggested_object_id = f"{DOMAIN}_{key}"
         self._attr_entity_category = entity_category
 
