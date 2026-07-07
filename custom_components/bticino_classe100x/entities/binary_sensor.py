@@ -53,8 +53,10 @@ class BticinoClasse100xConnectionSensor(
     ) -> None:
         """Initialize the connection sensor."""
         super().__init__(coordinator)
+
         self._host = host
         self._attr_unique_id = f"{DOMAIN}_{host}_connection"
+        self._attr_suggested_object_id = f"{DOMAIN}_connection_status"
 
     @property
     def is_on(self) -> bool:

@@ -57,13 +57,17 @@ async def _async_migrate_entity_ids(hass: HomeAssistant, host: str) -> None:
 
         if registry.async_get(target_entity_id) is not None:
             _LOGGER.warning(
-                "Cannot rename %s to %s because target already exists",
+                "Cannot rename BTicino entity %s to %s because target already exists",
                 current_entity_id,
                 target_entity_id,
             )
             continue
 
-        _LOGGER.info("Renaming BTicino entity %s to %s", current_entity_id, target_entity_id)
+        _LOGGER.info(
+            "Renaming BTicino entity %s to %s",
+            current_entity_id,
+            target_entity_id,
+        )
         registry.async_update_entity(current_entity_id, new_entity_id=target_entity_id)
 
 
@@ -76,9 +80,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Entity IDs are generated only after platforms are loaded.
+    # Therefore migration must run after async_forward_entry_setups().
     await _async_migrate_entity_ids(hass, entry.data[CONF_HOST])
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 

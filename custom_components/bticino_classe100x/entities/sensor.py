@@ -206,6 +206,7 @@ class BticinoClasse100xSensor(
 
         self._attr_name = description.name
         self._attr_unique_id = f"{DOMAIN}_{host}_{description.key}"
+        self._attr_suggested_object_id = f"{DOMAIN}_{description.key}"
 
     @property
     def native_value(self) -> Any:

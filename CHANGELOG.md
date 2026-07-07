@@ -1,5 +1,15 @@
 ﻿# Changelog
 
+## 0.0.3
+
+Entity ID cleanup release.
+
+### Fixed
+
+- Added suggested object IDs for all BTicino entities.
+- Moved entity ID migration to run after platform setup.
+- Prevented area names from being included in generated entity IDs.
+
 ## 0.0.2
 
 Project metadata validation release.
