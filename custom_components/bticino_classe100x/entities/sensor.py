@@ -90,7 +90,11 @@ def _parse_timestamp(value: str | None) -> datetime | None:
 def _last_failed_status(
     coordinator: BticinoClasse100xCoordinator,
 ) -> str:
-    """Return a human readable failed-test status."""
+    """Return the failed-test status as an enum state slug.
+
+    The returned value ("never"/"failed") is translated to a human-readable
+    label through the entity ``state`` translation keys.
+    """
     if coordinator.last_failed_test_time is None:
         return FAILED_STATUS_NEVER
 
