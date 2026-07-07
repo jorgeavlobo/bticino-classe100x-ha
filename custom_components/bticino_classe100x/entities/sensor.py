@@ -2,24 +2,23 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
-    SensorEntityDescription,
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory, UnitOfTime
+from homeassistant.const import UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from ..const import DOMAIN, TEST_RESULT_FAILED, TEST_RESULT_SUCCESS
 from ..coordinator import BticinoClasse100xCoordinator
 from .base import BticinoClasse100xEntity, get_host_from_entry
+from .descriptions import BticinoSensorDescription
 
 
 # Sensor state values are slugs so Home Assistant can translate them through the
@@ -42,14 +41,6 @@ FAILED_STATUS_FAILED = "failed"
 FAILED_STATUS_OPTIONS = [FAILED_STATUS_NEVER, FAILED_STATUS_FAILED]
 
 SLOW_LATENCY_THRESHOLD_MS = 2000
-
-
-@dataclass(frozen=True, kw_only=True)
-class BticinoSensorDescription(SensorEntityDescription):
-    """Description of a BTicino CLASSE100X sensor."""
-
-    value_fn: Callable[[BticinoClasse100xCoordinator], Any]
-    entity_category: EntityCategory | None = EntityCategory.DIAGNOSTIC
 
 
 def _get_health_status(coordinator: BticinoClasse100xCoordinator) -> str:
