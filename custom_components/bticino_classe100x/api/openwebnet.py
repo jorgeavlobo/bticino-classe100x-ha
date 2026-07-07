@@ -24,6 +24,11 @@ OPENWEBNET_PORT = 30006
 OPENWEBNET_STATUS_REQUEST = "*#*1##"
 
 
+def _netcat_pipe(command: str) -> str:
+    """Build the shell command that pipes an OpenWebNet frame to the socket."""
+    return f"echo '{command}' | nc {OPENWEBNET_HOST} {OPENWEBNET_PORT}"
+
+
 class BticinoOpenWebNetClient:
     """Client used to send OpenWebNet commands through SSH."""
 
@@ -34,9 +39,7 @@ class BticinoOpenWebNetClient:
 
     def test_connection(self) -> bool:
         """Test SSH access and local OpenWebNet socket availability."""
-        result = self._ssh_client.run(
-            f"echo '{OPENWEBNET_STATUS_REQUEST}' | nc {OPENWEBNET_HOST} {OPENWEBNET_PORT}"
-        )
+        result = self._ssh_client.run(_netcat_pipe(OPENWEBNET_STATUS_REQUEST))
 
         if result.stdout:
             _LOGGER.info("Connected to BTicino CLASSE100X at %s", self.config.host)
@@ -54,9 +57,9 @@ class BticinoOpenWebNetClient:
         _LOGGER.info("Opening %s through BTicino CLASSE100X", name)
 
         remote_command = (
-            f"echo '{press_command}' | nc {OPENWEBNET_HOST} {OPENWEBNET_PORT}; "
+            f"{_netcat_pipe(press_command)}; "
             f"sleep {self.config.release_delay}; "
-            f"echo '{release_command}' | nc {OPENWEBNET_HOST} {OPENWEBNET_PORT}"
+            f"{_netcat_pipe(release_command)}"
         )
 
         result = self._ssh_client.run(remote_command)
