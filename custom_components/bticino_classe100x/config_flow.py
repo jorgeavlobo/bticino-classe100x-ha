@@ -8,7 +8,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.selector import (
@@ -136,11 +136,15 @@ class BticinoClasse100xConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     @staticmethod
-    def async_get_options_flow(config_entry: ConfigEntry):
+    def async_get_options_flow(
+        config_entry: ConfigEntry,
+    ) -> BticinoClasse100xOptionsFlow:
         """Create the options flow."""
         return BticinoClasse100xOptionsFlow(config_entry)
 
-    async def async_step_user(self, user_input: dict | None = None):
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the initial setup step."""
         errors: dict[str, str] = {}
 
@@ -183,7 +187,9 @@ class BticinoClasse100xOptionsFlow(config_entries.OptionsFlow):
         """Initialize the options flow."""
         self._config_entry = config_entry
 
-    async def async_step_init(self, user_input: dict | None = None):
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Manage BTicino CLASSE100X options."""
         errors: dict[str, str] = {}
 

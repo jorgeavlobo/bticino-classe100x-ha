@@ -16,14 +16,8 @@ DEFAULT_SSH_KEY_PATH = "/config/ssh/bticinokey"
 DEFAULT_COMMAND_TIMEOUT = 10
 DEFAULT_RELEASE_DELAY = 1.0
 
-SSH_PORT = 22
-OPENWEBNET_LOCAL_HOST = "0"
-OPENWEBNET_PORT = 30006
-
 BUTTON_TYPE_COMMAND = "command"
 BUTTON_TYPE_TEST = "test"
-
-OPENWEBNET_TEST_COMMAND = "*#*1##"
 
 # Connection test result values. Shared between the coordinator (which sets them)
 # and the sensor platform (which exposes them as translated enum states), so both

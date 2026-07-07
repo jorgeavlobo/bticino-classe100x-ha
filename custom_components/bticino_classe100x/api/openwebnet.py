@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import time
 import logging
+import time
 
 from .ssh_client import (
     BticinoAuthenticationMethodError,
@@ -16,6 +16,13 @@ from .ssh_client import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# OpenWebNet is reached on the device itself through a local TCP socket, so the
+# commands are piped to netcat targeting the loopback gateway ("0") on the
+# standard OpenWebNet port.
+OPENWEBNET_HOST = "0"
+OPENWEBNET_PORT = 30006
+OPENWEBNET_STATUS_REQUEST = "*#*1##"
+
 
 class BticinoOpenWebNetClient:
     """Client used to send OpenWebNet commands through SSH."""
@@ -27,7 +34,9 @@ class BticinoOpenWebNetClient:
 
     def test_connection(self) -> bool:
         """Test SSH access and local OpenWebNet socket availability."""
-        result = self._ssh_client.run("echo '*#*1##' | nc 0 30006")
+        result = self._ssh_client.run(
+            f"echo '{OPENWEBNET_STATUS_REQUEST}' | nc {OPENWEBNET_HOST} {OPENWEBNET_PORT}"
+        )
 
         if result.stdout:
             _LOGGER.info("Connected to BTicino CLASSE100X at %s", self.config.host)
@@ -45,9 +54,9 @@ class BticinoOpenWebNetClient:
         _LOGGER.info("Opening %s through BTicino CLASSE100X", name)
 
         remote_command = (
-            f"echo '{press_command}' | nc 0 30006; "
+            f"echo '{press_command}' | nc {OPENWEBNET_HOST} {OPENWEBNET_PORT}; "
             f"sleep {self.config.release_delay}; "
-            f"echo '{release_command}' | nc 0 30006"
+            f"echo '{release_command}' | nc {OPENWEBNET_HOST} {OPENWEBNET_PORT}"
         )
 
         result = self._ssh_client.run(remote_command)
