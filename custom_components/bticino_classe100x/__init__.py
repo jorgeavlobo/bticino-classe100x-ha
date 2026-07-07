@@ -11,6 +11,7 @@ from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN
 from .coordinator import BticinoClasse100xCoordinator
+from .device import async_update_device_registry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,7 +85,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Entity IDs are generated only after platforms are loaded.
     # Therefore migration must run after async_forward_entry_setups().
-    await _async_migrate_entity_ids(hass, entry.data[CONF_HOST])
+    host = entry.data[CONF_HOST]
+    await _async_migrate_entity_ids(hass, host)
+
+    # Home Assistant only reads device_info when an entity is first added, so
+    # details discovered on a later poll (for example the MAC address when the
+    # device was unreachable at startup) would otherwise never reach the device
+    # registry. Keep the device entry updated as new information arrives.
+    async_update_device_registry(hass, coordinator, host)
+    entry.async_on_unload(
+        coordinator.async_add_listener(
+            lambda: async_update_device_registry(hass, coordinator, host)
+        )
+    )
 
     return True
 
