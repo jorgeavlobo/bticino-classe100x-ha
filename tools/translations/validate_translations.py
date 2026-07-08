@@ -84,6 +84,14 @@ def _compare(reference: dict, candidate: dict, path: str = "") -> list[str]:
             issues.append(
                 f"type mismatch at {key_path}: expected {expected}, got {actual}"
             )
+        elif not isinstance(ref_value, str):
+            # The canonical en.json leaf itself is not a string (e.g. a value
+            # accidentally committed as a number or null). Flag the source, since
+            # placeholders() ignores non-strings and would otherwise pass.
+            issues.append(
+                f"invalid reference value at {key_path}: en.json must use "
+                f"string values, got {type(ref_value).__name__}"
+            )
         elif not isinstance(cand_value, str):
             # Both are leaves, but a translation value must be a string; a locale
             # that turned a string into null/true/123 would otherwise only be

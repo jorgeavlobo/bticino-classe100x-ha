@@ -91,6 +91,18 @@ def main() -> int:
         )
     )
 
+    # The reverse: a non-string leaf in the canonical reference itself (a broken
+    # en.json) must be flagged, not silently passed.
+    checks.append(
+        (
+            "non-string reference leaf detected",
+            _has(
+                _compare({"a": 123}, {"a": "translated"}),
+                "invalid reference value at a: en.json must use string values, got int",
+            ),
+        )
+    )
+
     # A dropped placeholder in a translated value is reported.
     dropped_placeholder = {
         "config": {"title": "BTicino", "note": "Verbindung fehlgeschlagen"},
