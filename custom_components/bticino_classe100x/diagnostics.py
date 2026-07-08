@@ -89,7 +89,7 @@ async def async_get_config_entry_diagnostics(
 
     entity_registry = er.async_get(hass)
     entities = er.async_entries_for_config_entry(entity_registry, entry.entry_id)
-    platforms = sorted({entity.domain for entity in entities})
+    platforms = sorted({entity.entity_id.split(".")[0] for entity in entities})
 
     device_information = getattr(coordinator, "device_information", None)
 
