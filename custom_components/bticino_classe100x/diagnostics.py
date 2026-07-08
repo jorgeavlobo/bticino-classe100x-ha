@@ -41,6 +41,23 @@ def _sanitize_error(error: str | None, ssh_key_path: str | None) -> str | None:
     return error.replace(ssh_key_path, "<ssh_key_path>")
 
 
+def _redact_mac(mac_address: str | None) -> str | None:
+    """Mask the device-specific half of a MAC address.
+
+    Diagnostics are meant to be shared in issue reports, so only the vendor
+    prefix (OUI) is kept for debugging while the unique portion is hidden to
+    avoid publishing a stable device identifier.
+    """
+    if not mac_address:
+        return mac_address
+
+    parts = mac_address.split(":")
+    if len(parts) != 6:
+        return mac_address
+
+    return ":".join([*parts[:3], "**", "**", "**"])
+
+
 async def async_get_config_entry_diagnostics(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -54,7 +71,12 @@ async def async_get_config_entry_diagnostics(
     """
     coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
 
-    ssh_key_path = entry.data.get(CONF_SSH_KEY_PATH)
+    # Mirror the coordinator: options override the original config entry data,
+    # so read connection settings (and the key path used for redaction) from the
+    # merged mapping to avoid reporting or leaking stale values.
+    config = {**entry.data, **entry.options}
+
+    ssh_key_path = config.get(CONF_SSH_KEY_PATH)
     ssh_key_exists = False
 
     if ssh_key_path:
@@ -86,16 +108,16 @@ async def async_get_config_entry_diagnostics(
             "source": entry.source,
         },
         "connection": {
-            "host": entry.data.get(CONF_HOST),
-            "username": entry.data.get(CONF_USERNAME),
-            "auth_method": entry.data.get(CONF_AUTH_METHOD, AUTH_METHOD_SSH_KEY),
+            "host": config.get(CONF_HOST),
+            "username": config.get(CONF_USERNAME),
+            "auth_method": config.get(CONF_AUTH_METHOD, AUTH_METHOD_SSH_KEY),
             "ssh_key_configured": bool(ssh_key_path),
             "ssh_key_exists": ssh_key_exists,
-            "password_configured": bool(entry.data.get(CONF_PASSWORD)),
-            "command_timeout": entry.data.get(
+            "password_configured": bool(config.get(CONF_PASSWORD)),
+            "command_timeout": config.get(
                 CONF_COMMAND_TIMEOUT, DEFAULT_COMMAND_TIMEOUT
             ),
-            "release_delay": entry.data.get(CONF_RELEASE_DELAY, DEFAULT_RELEASE_DELAY),
+            "release_delay": config.get(CONF_RELEASE_DELAY, DEFAULT_RELEASE_DELAY),
         },
         "status": {
             "connected": bool(coordinator.data) if coordinator else None,
@@ -125,7 +147,9 @@ async def async_get_config_entry_diagnostics(
             "kernel": device_information.kernel if device_information else None,
             "uptime": device_information.uptime if device_information else None,
             "mac_address": (
-                device_information.mac_address if device_information else None
+                _redact_mac(device_information.mac_address)
+                if device_information
+                else None
             ),
             "ssh_latency_ms": (
                 device_information.ssh_latency_ms if device_information else None
