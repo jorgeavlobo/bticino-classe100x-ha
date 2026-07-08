@@ -58,9 +58,17 @@ def run_cleanup(options: ToolOptions, path: Path, mutate: Mutator) -> None:
         return
 
     if options.backup:
-        backup_path = create_backup(path)
-        if backup_path:
-            log.info("Backup created: %s", backup_path)
+        try:
+            backup_path = create_backup(path)
+        except OSError as exc:
+            log.error("Could not back up %s: %s; aborting", path.name, exc)
+            return
+
+        if backup_path is None:
+            log.error("Could not back up %s (file missing); aborting", path.name)
+            return
+
+        log.info("Backup created: %s", backup_path)
     else:
         log.warning("Skipping backup for %s (--no-backup)", path.name)
 

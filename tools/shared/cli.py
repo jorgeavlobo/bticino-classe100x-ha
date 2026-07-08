@@ -6,6 +6,7 @@ import argparse
 from dataclasses import dataclass
 import logging
 from pathlib import Path
+import sys
 
 
 _LOGGER = logging.getLogger("bticino_tools")
@@ -109,6 +110,9 @@ def confirm(question: str, assume_yes: bool) -> bool:
     """
     if assume_yes:
         return True
+
+    if not sys.stdin.isatty():
+        return False
 
     try:
         answer = input(f"{question} [y/N] ").strip().lower()
