@@ -8,6 +8,8 @@ import logging
 from pathlib import Path
 import sys
 
+from shared.paths import storage_path
+
 
 _LOGGER = logging.getLogger("bticino_tools")
 
@@ -76,6 +78,12 @@ def parse_options(parser: argparse.ArgumentParser) -> ToolOptions:
 
     if not config_path.is_dir():
         parser.error(f"Config path is not a directory: {config_path}")
+
+    if not storage_path(config_path).is_dir():
+        parser.error(
+            f"No .storage folder found in {config_path}; point --config at a "
+            "Home Assistant config directory (or an offline copy of one)"
+        )
 
     configure_logging(args.verbose)
 
