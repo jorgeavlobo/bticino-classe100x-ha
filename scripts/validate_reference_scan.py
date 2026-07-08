@@ -232,6 +232,29 @@ def _scan() -> tuple[object, str]:
     return result, buffer.getvalue()
 
 
+def _scan_hacs_only_dashboard() -> object:
+    """Scan a storage dir whose only match is a HACS entity in a dashboard.
+
+    There is no ``core.entity_registry``/``core.restore_state`` to discover the
+    HACS entities from, so the text pass must rely on the known static HACS ids
+    to classify the line as informational rather than confirmed.
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        storage = Path(temp_dir) / ".storage"
+        storage.mkdir(parents=True, exist_ok=True)
+        (storage / "lovelace").write_text(
+            json.dumps({"cards": [{"entity": f"switch.{DOMAIN}_pre_release"}]}),
+            "utf-8",
+        )
+        buffer = io.StringIO()
+        stdout = sys.stdout
+        sys.stdout = buffer
+        try:
+            return find_references(ToolOptions(config_path=Path(temp_dir)))
+        finally:
+            sys.stdout = stdout
+
+
 # Corrupted / schema-drifted storage: non-dict entries, a non-list bucket, and a
 # storage file whose top-level JSON is not an object. The scan must degrade
 # gracefully (never raise), still confirm the well-formed BTicino references, and
@@ -480,6 +503,19 @@ def main() -> int:
     except Exception:  # noqa: BLE001 - any raise here is the failure under test
         malformed_ok = False
     checks.append(("malformed storage degrades gracefully", malformed_ok))
+
+    # A dashboard that references only a HACS entity, with no registry files to
+    # discover it from, must be informational (not confirmed) via the known
+    # static HACS ids, so the exit code is not flipped to 1.
+    hacs_only = _scan_hacs_only_dashboard()
+    checks.append(
+        (
+            "HACS-only dashboard without registry is informational",
+            hacs_only.storage_found
+            and hacs_only.confirmed == 0
+            and hacs_only.hacs >= 1,
+        )
+    )
 
     ok = True
     for label, passed in checks:

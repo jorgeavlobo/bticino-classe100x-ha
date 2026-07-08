@@ -29,6 +29,7 @@ from diagnostics.shared.entities import (
     mentions_bticino,
 )
 from shared.cli import ToolOptions, build_parser, get_logger, parse_options
+from shared.hacs import HACS_ENTITY_IDS
 from shared.jsonfile import read_json
 from shared.matching import (
     LEGACY_ENTITY_IDS,
@@ -291,9 +292,13 @@ def find_references(options: ToolOptions) -> ScanResult:
             # line) can reference both a HACS entity and a real BTicino entity.
             # Remove the HACS entity ids first; only if no BTicino reference
             # remains is the line HACS-only, so a real reference is never
-            # downgraded to informational.
+            # downgraded to informational. Both the known static HACS ids and
+            # any discovered in the registries are stripped, so a line that
+            # references only a HACS entity is informational even when the HACS
+            # entities are absent from (or their registry files unreadable in)
+            # this storage copy.
             remainder = line
-            for hacs_id in hacs_entity_ids:
+            for hacs_id in HACS_ENTITY_IDS | hacs_entity_ids:
                 remainder = remainder.replace(hacs_id, "")
 
             if _line_references_bticino(remainder):
