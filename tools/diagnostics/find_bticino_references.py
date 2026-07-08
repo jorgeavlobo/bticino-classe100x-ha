@@ -192,11 +192,13 @@ def find_references(options: ToolOptions) -> ScanResult:
                         contains_bticino_reference(entity)
                     ):
                         # The second clause mirrors clean_entity_registry, which
-                        # removes any entry whose serialized JSON carries the
-                        # integration token or a legacy id. It catches legacy
-                        # entries (e.g. a ``button.condominium_gate`` left by the
-                        # old ``bticino_classe100x_buttons`` platform) that no
-                        # longer carry a BTicino platform/unique_id or a live
+                        # uses the same predicate: for an entry carrying a
+                        # ``platform`` it matches structurally on the identifiers
+                        # (entity_id current/legacy forms, unique_id prefix or
+                        # platform). It catches legacy entries (e.g. a
+                        # ``button.condominium_gate`` left by the old
+                        # ``bticino_classe100x_buttons`` platform) that no longer
+                        # carry a current BTicino platform/unique_id or a live
                         # config entry, keeping the scan and the cleanup aligned.
                         confirmed += 1
                         print(
