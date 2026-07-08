@@ -11,10 +11,13 @@ the integration ships the translations.
 lowercase slug (`healthy`, `slow`, `offline`, `success`, `failed`, `never`) and
 provides the matching labels under
 `entity.sensor.<key>.state.<slug>` in every language file
-(`translations/en.json`, `translations/pt.json`, `translations/fr.json`). Home
-Assistant's own translation loader resolves those keys correctly for every
-language — this is verified in CI by
-[`scripts/validate_translations.py`](../scripts/validate_translations.py).
+(`translations/en.json`, `translations/pt.json`, `translations/fr.json`), which
+is the structure Home Assistant's translation loader reads at runtime.
+
+CI does not exercise the Home Assistant runtime; instead
+[`scripts/validate_translations.py`](../scripts/validate_translations.py) checks
+translation *completeness* — that every language file exposes exactly the same
+keys as `translations/en.json` — so no language can silently omit a state slug.
 
 Two things can make the correct labels *appear* untranslated in the UI:
 
