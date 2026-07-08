@@ -43,12 +43,18 @@ The snippet below is a complete dashboard (it has both `title:` and `views:`).
 Every Tile card uses a short `name` override, so the cards read
 `Condominium Gate` instead of `BTicino CLASSE100X Condominium Gate`.
 
-- **As a new dashboard**: create a dashboard, switch it to **YAML mode** (⋮ →
-  *Edit dashboard* → ⋮ → *Raw configuration editor*) and paste the whole
-  snippet.
-- **As a view on an existing dashboard**: paste only the list item under
-  `views:` (the `- title: Intercom` block and everything indented beneath it)
-  into that dashboard's existing `views:` list.
+For a UI-managed dashboard, open its **Raw configuration editor** (⋮ → *Edit
+dashboard* → ⋮ → *Raw configuration editor*), then:
+
+- **New dashboard**: paste the whole snippet (it includes both `title:` and
+  `views:`).
+- **Existing dashboard**: paste only the list item under `views:` (the
+  `- title: Intercom` block and everything indented beneath it) into that
+  dashboard's existing `views:` list.
+
+If the dashboard is instead set to YAML mode via `configuration.yaml`, edit its
+referenced YAML file directly (the Raw configuration editor is not available for
+YAML-mode dashboards) and add the same content there.
 
 ```yaml
 title: BTicino CLASSE100X
