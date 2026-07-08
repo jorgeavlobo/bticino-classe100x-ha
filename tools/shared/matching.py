@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from shared.hacs import HACS_ENTITY_ID_PREFIXES, HACS_PLATFORM
+
 
 BTICINO_STRINGS: tuple[str, ...] = (
     "bticino_classe100x",
@@ -20,16 +22,6 @@ LEGACY_ENTITY_IDS: tuple[str, ...] = (
     "automation.condominium_gate_opening",
     "automation.pedestrian_door_opening",
 )
-
-# HACS creates its own management entities for the integration (an ``update``
-# entity and a ``pre_release`` switch). Their ids embed the integration name but
-# they belong to HACS and must never be treated as BTicino entries for cleanup.
-HACS_PLATFORM = "hacs"
-HACS_ENTITY_ID_PREFIXES: tuple[str, ...] = (
-    "update.bticino_classe100x",
-    "switch.bticino_classe100x",
-)
-
 
 def _entity_id_of(value: Any) -> str | None:
     """Return the entity_id carried by a registry or restore-state entry."""

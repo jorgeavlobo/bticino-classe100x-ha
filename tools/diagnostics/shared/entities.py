@@ -4,18 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
+from shared.hacs import is_hacs_platform
+
 DOMAIN = "bticino_classe100x"
 UNIQUE_ID_PREFIX = f"{DOMAIN}_"
-
-# HACS creates its own management entities (an ``update`` entity and a
-# ``pre_release`` switch) whose entity_id and unique_id embed the integration
-# name but that belong to HACS, not to this integration.
-HACS_PLATFORM = "hacs"
 
 
 def is_hacs_entity(entity: dict[str, Any]) -> bool:
     """Return true for entities created and managed by HACS."""
-    return entity.get("platform") == HACS_PLATFORM
+    return is_hacs_platform(entity)
 
 
 def mentions_bticino(entity: dict[str, Any]) -> bool:

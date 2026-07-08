@@ -111,6 +111,15 @@ RESTORE_STATE = {
                 "state": f"see {DOMAIN} docs",
             }
         },
+        # Unrelated entity whose STATE text is exactly a legacy entity id (e.g. a
+        # history/text sensor mirroring another entity): still must not match,
+        # because matching is on the entity_id, never the state text.
+        {
+            "state": {
+                "entity_id": "sensor.last_triggered",
+                "state": "automation.condominium_gate_opening",
+            }
+        },
     ]
 }
 LOVELACE = json.dumps(
@@ -155,6 +164,9 @@ def main() -> int:
     checks.append(("no video_intercom false positive", "video_intercom" not in output))
     checks.append(
         ("no state-text false positive", "sensor.unrelated_note" not in output)
+    )
+    checks.append(
+        ("no legacy-id-in-state false positive", "sensor.last_triggered" not in output)
     )
     checks.append(("HACS entities are informational", result.hacs >= 2))
     checks.append(("real references are confirmed", result.confirmed >= 4))
