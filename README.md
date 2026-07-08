@@ -111,6 +111,16 @@ Default SSH key path:
 - Last Failed Test
 - Last Failed Status
 
+## Dashboard
+
+Home Assistant builds entity names from the device name plus the entity name
+(for example `BTicino CLASSE100X Condominium Gate`), which can look long on Tile
+cards. To show short, dashboard-friendly names, override the card `name` in your
+dashboard YAML.
+
+See [docs/Dashboard.md](docs/Dashboard.md) for the rationale and a ready-to-use
+example dashboard.
+
 ## HomeKit
 
 The recommended HomeKit setup is a YAML-defined HomeKit Bridge with explicit entity inclusion.
