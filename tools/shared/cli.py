@@ -72,7 +72,7 @@ def build_parser(
 def parse_options(parser: argparse.ArgumentParser) -> ToolOptions:
     """Parse arguments into :class:`ToolOptions` and validate the config path."""
     args = parser.parse_args()
-    config_path = Path(args.config)
+    config_path = Path(args.config).expanduser()
 
     if not config_path.is_dir():
         parser.error(f"Config path is not a directory: {config_path}")
@@ -116,7 +116,10 @@ def confirm(question: str, assume_yes: bool) -> bool:
 
     try:
         answer = input(f"{question} [y/N] ").strip().lower()
-    except EOFError:
+    except (EOFError, KeyboardInterrupt):
+        # Treat end-of-input and Ctrl+C as "no" so the tool exits cleanly
+        # without modifying any file.
+        print()
         return False
 
     return answer in ("y", "yes")
