@@ -40,6 +40,10 @@ class ExpectedEntity:
     unit_of_measurement: str | None = None
     state_class: str | None = None
     options: tuple[str, ...] | None = None
+    # Declared to mirror the entity descriptions but intentionally NOT compared
+    # for drift: Home Assistant persists it as ``disabled_by``, which a user can
+    # legitimately toggle from the UI, so comparing it would raise false
+    # positives whenever someone enabled or disabled one of these entities.
     entity_registry_enabled_default: bool = True
     # Deprecated ``unique_key`` values this entity was migrated away from. If a
     # registry entry still uses one of these suffixes the migration is stale.
