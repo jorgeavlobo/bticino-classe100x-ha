@@ -121,7 +121,11 @@ def main() -> int:
         print()
 
     if ok:
-        print(f"All {len(locale_files)} locale(s) are consistent with {CANONICAL_LOCALE}.")
+        compared = sum(1 for path in locale_files if path.name != CANONICAL_LOCALE)
+        print(
+            f"{CANONICAL_LOCALE} is valid and all {compared} other locale(s) "
+            f"are consistent with it."
+        )
         return 0
 
     print("Translation validation failed.")
