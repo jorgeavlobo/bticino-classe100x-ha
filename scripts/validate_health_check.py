@@ -204,6 +204,20 @@ def _foreign_platform(registry: dict[str, Any]) -> None:
     )
 
 
+def _hacs_entity_ignored(registry: dict[str, Any]) -> None:
+    # HACS management entities embed the integration name but belong to HACS.
+    # They must be ignored, not flagged as unexpected BTicino entities.
+    registry["data"]["entities"].append(
+        {
+            "entity_id": f"update.{DOMAIN}_update",
+            "unique_id": f"{DOMAIN}_update",
+            "platform": "hacs",
+            "config_entry_id": "hacs-entry",
+            "orphaned_timestamp": None,
+        }
+    )
+
+
 def _foreign_platform_expected_key(registry: dict[str, Any]) -> None:
     # A foreign-platform entity reusing a *real* expected unique key. The entity
     # registry check must flag it (and report the real one missing), and the
@@ -311,6 +325,14 @@ SCENARIOS: tuple[
         "FAIL",
         "PASS",
         "non-BTicino platform",
+        None,
+    ),
+    (
+        "hacs entity ignored",
+        _hacs_entity_ignored,
+        "PASS",
+        "PASS",
+        None,
         None,
     ),
     (

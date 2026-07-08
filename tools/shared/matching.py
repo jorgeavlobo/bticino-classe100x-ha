@@ -1,4 +1,4 @@
-﻿"""Matching helpers for BTicino cleanup and migration tools."""
+"""Matching helpers for BTicino cleanup and migration tools."""
 
 from __future__ import annotations
 
@@ -21,9 +21,57 @@ LEGACY_ENTITY_IDS: tuple[str, ...] = (
     "automation.pedestrian_door_opening",
 )
 
+# HACS creates its own management entities for the integration (an ``update``
+# entity and a ``pre_release`` switch). Their ids embed the integration name but
+# they belong to HACS and must never be treated as BTicino entries for cleanup.
+HACS_PLATFORM = "hacs"
+HACS_ENTITY_ID_PREFIXES: tuple[str, ...] = (
+    "update.bticino_classe100x",
+    "switch.bticino_classe100x",
+)
+
+
+def _entity_id_of(value: Any) -> str | None:
+    """Return the entity_id carried by a registry or restore-state entry."""
+    if not isinstance(value, dict):
+        return None
+
+    entity_id = value.get("entity_id")
+    if isinstance(entity_id, str):
+        return entity_id
+
+    state = value.get("state")
+    if isinstance(state, dict):
+        entity_id = state.get("entity_id")
+        if isinstance(entity_id, str):
+            return entity_id
+
+    return None
+
+
+def is_hacs_managed(value: Any) -> bool:
+    """Return true when a value describes a HACS-managed entity.
+
+    A HACS entity is recognised either by its ``platform`` (entity registry
+    entries) or by its entity_id prefix (restore-state entries, which do not
+    carry the platform).
+    """
+    if isinstance(value, dict) and value.get("platform") == HACS_PLATFORM:
+        return True
+
+    entity_id = _entity_id_of(value)
+    return entity_id is not None and entity_id.startswith(HACS_ENTITY_ID_PREFIXES)
+
 
 def contains_bticino_reference(value: Any) -> bool:
-    """Return true if an object contains BTicino-related data."""
+    """Return true if an object contains BTicino-related data.
+
+    HACS-managed entities are never matched even though their ids embed the
+    integration name, so the cleanup tools never remove them.
+    """
+    if is_hacs_managed(value):
+        return False
+
     text = json.dumps(value, ensure_ascii=False)
 
     return any(item in text for item in BTICINO_STRINGS + LEGACY_ENTITY_IDS)

@@ -7,6 +7,24 @@ from typing import Any
 DOMAIN = "bticino_classe100x"
 UNIQUE_ID_PREFIX = f"{DOMAIN}_"
 
+# HACS creates its own management entities (an ``update`` entity and a
+# ``pre_release`` switch) whose entity_id and unique_id embed the integration
+# name but that belong to HACS, not to this integration.
+HACS_PLATFORM = "hacs"
+
+
+def is_hacs_entity(entity: dict[str, Any]) -> bool:
+    """Return true for entities created and managed by HACS."""
+    return entity.get("platform") == HACS_PLATFORM
+
+
+def mentions_bticino(entity: dict[str, Any]) -> bool:
+    """Return true if an entity's ids reference the BTicino integration."""
+    return any(
+        isinstance(entity.get(key), str) and DOMAIN in entity[key]
+        for key in ("entity_id", "unique_id")
+    )
+
 
 def bticino_config_entries(config_entries: dict[str, Any]) -> list[dict[str, Any]]:
     """Return the BTicino config entries."""
@@ -39,7 +57,13 @@ def is_bticino_entity(entity: dict[str, Any], config_entry_ids: set[str]) -> boo
     they are no longer linked to the current config entry: an entry counts as
     BTicino when its platform is the integration, its unique id carries the
     integration prefix, or it is still attached to a BTicino config entry.
+
+    HACS management entities are excluded even though their ids embed the
+    integration name: they are owned by HACS, not by this integration.
     """
+    if is_hacs_entity(entity):
+        return False
+
     if entity.get("platform") == DOMAIN:
         return True
 

@@ -1,25 +1,48 @@
-"""Find BTicino CLASSE100X references in Home Assistant storage files."""
+"""Find BTicino CLASSE100X references in Home Assistant storage files.
+
+References are identified by structural identifiers (the integration domain,
+entity platform, entity_id/unique_id prefix, config-entry domain and device
+identifiers) rather than by generic words, so entities that merely mention a
+word such as "condominium" are no longer reported. HACS management entities
+(``update``/``switch`` created by HACS) are reported separately as
+informational and never count as BTicino references.
+"""
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import sys
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 # Insert the tools directory ahead of this script's own directory so the shared
 # ``tools/shared`` package takes precedence over the local ``diagnostics/shared``
-# package (which is used by the health check tool).
+# package for the bare ``shared`` name, while ``diagnostics.shared`` stays
+# importable by its fully qualified name.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from diagnostics.shared.entities import (
+    DOMAIN,
+    bticino_config_entry_ids,
+    is_bticino_entity,
+    is_hacs_entity,
+    mentions_bticino,
+)
 from shared.cli import ToolOptions, build_parser, get_logger, parse_options
+from shared.jsonfile import read_json
+from shared.matching import contains_bticino_reference, is_hacs_managed
 from shared.paths import storage_path
 
+# The structural token used for the free-form text scan. Legacy ids such as
+# ``entrance_hall_bticino_classe100x`` contain it, so a single token is enough.
+STRUCTURAL_TOKEN = DOMAIN
 
-SEARCH_TERMS: tuple[str, ...] = (
-    "bticino",
-    "bticino_classe100x",
-    "condominium",
-    "pedestrian",
+# Files parsed structurally; they are skipped by the text scan.
+STRUCTURED_FILES = (
+    "core.config_entries",
+    "core.entity_registry",
+    "core.device_registry",
+    "core.restore_state",
 )
 
 
@@ -27,34 +50,150 @@ class ScanResult(NamedTuple):
     """Outcome of scanning the storage directory.
 
     ``storage_found`` is ``False`` when the storage path does not exist,
-    ``matches`` is the number of matching lines, and ``unreadable`` counts the
-    storage files that could not be read (so the scan is incomplete and cannot
-    certify that no references remain).
+    ``confirmed`` counts confirmed BTicino references, ``hacs`` counts
+    HACS-managed entities that mention the integration (informational only), and
+    ``unreadable`` counts files that could not be read (an incomplete scan).
     """
 
     storage_found: bool
-    matches: int
+    confirmed: int
+    hacs: int
     unreadable: int
 
 
-def find_references(options: ToolOptions) -> ScanResult:
-    """Print lines containing BTicino-related search terms.
+def _read(path: Path) -> dict[str, Any] | None:
+    """Read a JSON storage file, returning None when it cannot be read."""
+    try:
+        return read_json(path)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
 
-    Returns a :class:`ScanResult` describing whether the storage was found, how
-    many matching lines were printed, and how many files could not be read.
-    """
+
+def _identifiers_reference_bticino(identifiers: Any) -> bool:
+    """Return true if a device's identifiers reference the integration."""
+    if not isinstance(identifiers, list):
+        return False
+    return any(
+        isinstance(identifier, (list, tuple))
+        and identifier
+        and identifier[0] == DOMAIN
+        for identifier in identifiers
+    )
+
+
+def _restore_state_entity_id(entry: Any) -> Any:
+    """Return the entity_id carried by a restore-state entry, if any."""
+    if isinstance(entry, dict):
+        state = entry.get("state")
+        if isinstance(state, dict):
+            return state.get("entity_id")
+    return None
+
+
+def find_references(options: ToolOptions) -> ScanResult:
+    """Report BTicino references found in the Home Assistant storage files."""
     log = get_logger()
     storage = storage_path(options.config_path)
 
     if not storage.is_dir():
         log.warning("Storage path not found: %s", storage)
-        return ScanResult(storage_found=False, matches=0, unreadable=0)
+        return ScanResult(storage_found=False, confirmed=0, hacs=0, unreadable=0)
 
-    matches = 0
+    confirmed = 0
+    hacs = 0
     unreadable = 0
+    hacs_entity_ids: set[str] = set()
+
+    # --- Structural pass over the registries --------------------------------
+
+    config_entry_ids: set[str] = set()
+    config_entries_path = storage / "core.config_entries"
+    if config_entries_path.is_file():
+        config_entries = _read(config_entries_path)
+        if config_entries is None:
+            log.warning("Could not read %s", config_entries_path)
+            unreadable += 1
+        else:
+            config_entry_ids = set(bticino_config_entry_ids(config_entries))
+            for entry in config_entries.get("data", {}).get("entries", []):
+                if entry.get("domain") == DOMAIN:
+                    confirmed += 1
+                    print(
+                        f"{config_entries_path.name}: config entry "
+                        f"{entry.get('entry_id')} (domain: {DOMAIN})"
+                    )
+
+    entity_registry_path = storage / "core.entity_registry"
+    if entity_registry_path.is_file():
+        registry = _read(entity_registry_path)
+        if registry is None:
+            log.warning("Could not read %s", entity_registry_path)
+            unreadable += 1
+        else:
+            data = registry.get("data", {})
+            for bucket in ("entities", "deleted_entities"):
+                for entity in data.get(bucket, []):
+                    entity_id = entity.get("entity_id")
+                    if is_hacs_entity(entity) and mentions_bticino(entity):
+                        hacs += 1
+                        if isinstance(entity_id, str):
+                            hacs_entity_ids.add(entity_id)
+                        print(
+                            f"[HACS] {entity_registry_path.name} ({bucket}): "
+                            f"{entity_id} (unique_id: {entity.get('unique_id')})"
+                        )
+                    elif is_bticino_entity(entity, config_entry_ids):
+                        confirmed += 1
+                        print(
+                            f"{entity_registry_path.name} ({bucket}): "
+                            f"{entity_id} (unique_id: {entity.get('unique_id')})"
+                        )
+
+    device_registry_path = storage / "core.device_registry"
+    if device_registry_path.is_file():
+        devices = _read(device_registry_path)
+        if devices is None:
+            log.warning("Could not read %s", device_registry_path)
+            unreadable += 1
+        else:
+            data = devices.get("data", {})
+            for bucket in ("devices", "deleted_devices"):
+                for device in data.get(bucket, []):
+                    if _identifiers_reference_bticino(device.get("identifiers")):
+                        confirmed += 1
+                        print(
+                            f"{device_registry_path.name} ({bucket}): device "
+                            f"{device.get('id')} ({device.get('name')})"
+                        )
+
+    restore_state_path = storage / "core.restore_state"
+    if restore_state_path.is_file():
+        restore_state = _read(restore_state_path)
+        if restore_state is None:
+            log.warning("Could not read %s", restore_state_path)
+            unreadable += 1
+        else:
+            for entry in restore_state.get("data", []):
+                # Match on the entry's identifiers, not its free-form state text,
+                # so an unrelated entity whose state mentions a word like
+                # "condominium" is not reported.
+                if is_hacs_managed(entry):
+                    hacs += 1
+                    entity_id = _restore_state_entity_id(entry)
+                    if isinstance(entity_id, str):
+                        hacs_entity_ids.add(entity_id)
+                    print(f"[HACS] {restore_state_path.name}: {entity_id}")
+                elif contains_bticino_reference(entry):
+                    confirmed += 1
+                    print(
+                        f"{restore_state_path.name}: "
+                        f"{_restore_state_entity_id(entry)}"
+                    )
+
+    # --- Text pass over the remaining files ---------------------------------
 
     for path in sorted(storage.iterdir()):
-        if not path.is_file():
+        if not path.is_file() or path.name in STRUCTURED_FILES:
             continue
 
         # Skip the timestamped backups created by the clean tools so a finished
@@ -66,37 +205,44 @@ def find_references(options: ToolOptions) -> ScanResult:
         try:
             lines = path.read_text(encoding="utf-8").splitlines()
         except (OSError, UnicodeDecodeError) as exc:
-            # A file that cannot be read leaves the scan incomplete: it may still
-            # contain references, so surface it rather than silently passing.
             log.warning("Could not read %s: %s", path, exc)
             unreadable += 1
             continue
 
-        log.debug("Scanning %s", path)
-
         for index, line in enumerate(lines, start=1):
-            lowered = line.lower()
-            if any(term in lowered for term in SEARCH_TERMS):
-                matches += 1
-                print(f"{path}:{index}: {line}")
+            if STRUCTURAL_TOKEN not in line.lower():
+                continue
 
-    log.info("Found %d matching line(s) in %s", matches, storage)
+            if any(hacs_id in line for hacs_id in hacs_entity_ids):
+                hacs += 1
+                print(f"[HACS] {path.name}:{index}: {line.strip()}")
+            else:
+                confirmed += 1
+                print(f"{path.name}:{index}: {line.strip()}")
+
+    log.info(
+        "Found %d confirmed reference(s) and %d HACS-managed entity/entities in %s",
+        confirmed,
+        hacs,
+        storage,
+    )
     if unreadable:
         log.warning(
             "%d file(s) could not be read; the scan is incomplete", unreadable
         )
 
-    return ScanResult(storage_found=True, matches=matches, unreadable=unreadable)
+    return ScanResult(
+        storage_found=True, confirmed=confirmed, hacs=hacs, unreadable=unreadable
+    )
 
 
 def main() -> None:
     """Run the reference finder.
 
-    Exit codes: ``0`` when the storage was scanned in full and no references
-    remain, ``1`` when references were found, and ``2`` when the scan could not
-    be completed (the storage path is missing, for example a misconfigured
-    ``--config``, or one or more files could not be read), so the tool can be
-    used in scripts and CI to confirm a cleanup succeeded.
+    Exit codes: ``0`` when the storage was scanned in full and no confirmed
+    references remain, ``1`` when confirmed references were found, and ``2`` when
+    the scan could not be completed (missing storage path or unreadable files).
+    HACS-managed entities are informational and never affect the exit code.
     """
     parser = build_parser(
         "Find BTicino references in Home Assistant storage files",
@@ -106,7 +252,7 @@ def main() -> None:
 
     if not result.storage_found or result.unreadable > 0:
         sys.exit(2)
-    sys.exit(1 if result.matches > 0 else 0)
+    sys.exit(1 if result.confirmed > 0 else 0)
 
 
 if __name__ == "__main__":

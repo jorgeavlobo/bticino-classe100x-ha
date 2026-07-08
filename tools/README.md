@@ -58,9 +58,13 @@ Preview first, then apply:
 
 | Tool | Description |
 |------|-------------|
-| `diagnostics/find_bticino_references.py` | Lists BTicino references found in the Home Assistant storage files (backups are ignored). |
+| `diagnostics/find_bticino_references.py` | Lists BTicino references in the Home Assistant storage files, detected by structural identifiers (integration domain, entity platform, entity_id/unique_id prefix, config-entry domain and device identifiers) rather than generic words. HACS management entities (`update`/`switch`) are reported separately as informational. Backups are ignored. |
 
     python3 tools/diagnostics/find_bticino_references.py --config /config
+
+Exit codes: `0` when no confirmed references remain, `1` when confirmed
+references were found, `2` when the scan could not be completed. HACS-managed
+entities are informational and never change the exit code.
 
 ## Safety
 
