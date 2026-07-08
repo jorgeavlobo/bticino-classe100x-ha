@@ -33,6 +33,7 @@ from shared.jsonfile import read_json
 from shared.matching import (
     LEGACY_ENTITY_IDS,
     contains_bticino_reference,
+    is_bticino_entity_id,
     is_hacs_managed,
 )
 from shared.paths import storage_path
@@ -162,7 +163,16 @@ def find_references(options: ToolOptions) -> ScanResult:
                             f"[HACS] {entity_registry_path.name} ({bucket}): "
                             f"{entity_id} (unique_id: {entity.get('unique_id')})"
                         )
-                    elif is_bticino_entity(entity, config_entry_ids):
+                    elif is_bticino_entity(entity, config_entry_ids) or (
+                        contains_bticino_reference(entity)
+                    ):
+                        # The second clause mirrors clean_entity_registry, which
+                        # removes any entry whose serialized JSON carries the
+                        # integration token or a legacy id. It catches legacy
+                        # entries (e.g. a ``button.condominium_gate`` left by the
+                        # old ``bticino_classe100x_buttons`` platform) that no
+                        # longer carry a BTicino platform/unique_id or a live
+                        # config entry, keeping the scan and the cleanup aligned.
                         confirmed += 1
                         print(
                             f"{entity_registry_path.name} ({bucket}): "
@@ -205,7 +215,10 @@ def find_references(options: ToolOptions) -> ScanResult:
                     hacs += 1
                     hacs_entity_ids.add(entity_id)
                     print(f"[HACS] {restore_state_path.name}: {entity_id}")
-                elif DOMAIN in entity_id or entity_id in LEGACY_ENTITY_IDS:
+                elif is_bticino_entity_id(entity_id):
+                    # Match the object-id prefix (or a legacy id), never a bare
+                    # substring, so an unrelated ``sensor.my_bticino_classe100x``
+                    # is not reported.
                     confirmed += 1
                     print(f"{restore_state_path.name}: {entity_id}")
 
@@ -228,11 +241,22 @@ def find_references(options: ToolOptions) -> ScanResult:
             unreadable += 1
             continue
 
+        # HACS keeps its own bookkeeping (``hacs.data``, ``hacs.repositories``)
+        # which records the integration by name. These are owned by HACS, not by
+        # this integration, so any match is informational, never a confirmed
+        # reference the clean tools would act on.
+        hacs_file = path.name == "hacs" or path.name.startswith("hacs.")
+
         for index, line in enumerate(lines, start=1):
             # Match the integration token or an exact legacy entity id (the same
             # ids the clean tools remove), so a stale dashboard/script reference
             # is not missed.
             if not _line_references_bticino(line):
+                continue
+
+            if hacs_file:
+                hacs += 1
+                print(f"[HACS] {path.name}:{index}: {line.strip()}")
                 continue
 
             # A single compact JSON line (Home Assistant writes .storage on one

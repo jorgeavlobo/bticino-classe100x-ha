@@ -23,6 +23,25 @@ LEGACY_ENTITY_IDS: tuple[str, ...] = (
     "automation.pedestrian_door_opening",
 )
 
+# The object-id prefix of a current BTicino entity (``<domain>.<prefix><key>``).
+BTICINO_OBJECT_ID_PREFIX = "bticino_classe100x_"
+
+
+def is_bticino_entity_id(entity_id: Any) -> bool:
+    """Return true if an entity_id belongs to BTicino.
+
+    Matches the current object-id prefix (``bticino_classe100x_…``) or a known
+    legacy entity_id. The prefix is checked on the object id (after the ``.``),
+    not by substring, so an unrelated ``sensor.my_bticino_classe100x_x`` does not
+    match.
+    """
+    if not isinstance(entity_id, str):
+        return False
+    if entity_id in LEGACY_ENTITY_IDS:
+        return True
+    object_id = entity_id.split(".", 1)[1] if "." in entity_id else entity_id
+    return object_id.startswith(BTICINO_OBJECT_ID_PREFIX)
+
 
 def _entity_id_of(value: Any) -> str | None:
     """Return the entity_id carried by a registry or restore-state entry."""
@@ -62,9 +81,17 @@ def contains_bticino_reference(value: Any) -> bool:
 
     HACS-managed entities are never matched even though their ids embed the
     integration name, so the cleanup tools never remove them.
+
+    Restore-state records (a dict carrying a nested ``state`` dict) are matched
+    structurally on the entity_id they carry, never on their free-form state
+    text: an unrelated entity whose state happens to equal a legacy id (e.g. a
+    text/history sensor mirroring another entity) must not be removed.
     """
     if is_hacs_managed(value):
         return False
+
+    if isinstance(value, dict) and isinstance(value.get("state"), dict):
+        return is_bticino_entity_id(value["state"].get("entity_id"))
 
     text = json.dumps(value, ensure_ascii=False)
 

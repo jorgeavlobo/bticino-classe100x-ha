@@ -80,6 +80,16 @@ ENTITY_REGISTRY = {
                 "config_entry_id": "oth1",
                 "original_name": "Condominium Gate Button Pressed",
             },
+            # A legacy entry left by the removed ``bticino_classe100x_buttons``
+            # platform: it carries no BTicino platform, unique_id prefix or live
+            # config entry, but its entity_id is a known legacy id, so the clean
+            # tools remove it and the scan must confirm it too.
+            {
+                "entity_id": "button.condominium_gate",
+                "unique_id": "old_gate_button",
+                "platform": "removed_buttons_platform",
+                "config_entry_id": "gone",
+            },
         ],
         "deleted_entities": [],
     }
@@ -120,6 +130,15 @@ RESTORE_STATE = {
                 "state": "automation.condominium_gate_opening",
             }
         },
+        # An unrelated entity whose object id merely CONTAINS the token as a
+        # substring (``my_bticino_classe100x``, not the ``bticino_classe100x_``
+        # object-id prefix): matching is on the prefix, so this must not match.
+        {
+            "state": {
+                "entity_id": "sensor.my_bticino_classe100x",
+                "state": "x",
+            }
+        },
     ]
 }
 LOVELACE = json.dumps(
@@ -139,6 +158,21 @@ MIXED_DASHBOARD = json.dumps(
         ]
     }
 )
+# HACS's own bookkeeping records the integration by name. Any match here is
+# informational (owned by HACS), never a confirmed reference the clean tools
+# would act on. ``hacs_bookkeeping_marker`` appears only here so it can be
+# asserted precisely.
+HACS_DATA = json.dumps(
+    {
+        "repositories": {
+            "1": {
+                "full_name": "jorgeavlobo/bticino-classe100x-ha",
+                "domain": DOMAIN,
+                "note": "hacs_bookkeeping_marker",
+            }
+        }
+    }
+)
 
 
 def _write_fixture(base: Path) -> None:
@@ -151,6 +185,7 @@ def _write_fixture(base: Path) -> None:
     (storage / "lovelace").write_text(LOVELACE, "utf-8")
     (storage / "lovelace.legacy").write_text(LEGACY_DASHBOARD, "utf-8")
     (storage / "lovelace.mixed").write_text(MIXED_DASHBOARD, "utf-8")
+    (storage / "hacs.data").write_text(HACS_DATA, "utf-8")
 
 
 def _scan() -> tuple[object, str]:
@@ -189,6 +224,32 @@ def main() -> int:
     checks.append(
         ("legacy dashboard reference is detected", "button.condominium_gate" in output)
     )
+    # A legacy registry entry (no BTicino platform/unique_id/config entry, only a
+    # legacy entity_id) must be confirmed, matching what clean_entity_registry
+    # removes. Its unique_id appears only on the registry line.
+    checks.append(
+        ("legacy registry entry is confirmed", "old_gate_button" in output)
+    )
+    # A restore-state entity whose object id merely contains the token as a
+    # substring must not be reported (matching is on the object-id prefix).
+    checks.append(
+        (
+            "no object-id-substring false positive",
+            "sensor.my_bticino_classe100x" not in output,
+        )
+    )
+    # HACS bookkeeping files are informational: their lines must be labelled
+    # [HACS] and never counted as confirmed references.
+    hacs_data_lines = [
+        line for line in output.splitlines() if "hacs_bookkeeping_marker" in line
+    ]
+    checks.append(
+        (
+            "HACS bookkeeping file is informational",
+            bool(hacs_data_lines)
+            and all(line.startswith("[HACS]") for line in hacs_data_lines),
+        )
+    )
     # A line that mixes a HACS entity and a real BTicino entity must be confirmed
     # (not downgraded to informational). "uptime" appears only on that line.
     uptime_lines = [
@@ -207,10 +268,31 @@ def main() -> int:
     hacs_restore = {"state": {"entity_id": f"update.{DOMAIN}_update", "state": "on"}}
     video_restore = RESTORE_STATE["data"][2]
 
+    legacy_entity = ENTITY_REGISTRY["data"]["entities"][4]
+    legacy_id_in_state = RESTORE_STATE["data"][4]
+    substring_restore = RESTORE_STATE["data"][5]
+
     checks.append(("cleaner matches BTicino entity", contains_bticino_reference(bticino_entity)))
+    checks.append(("cleaner matches legacy registry entry", contains_bticino_reference(legacy_entity)))
     checks.append(("cleaner ignores HACS entity", not contains_bticino_reference(hacs_entity)))
     checks.append(("cleaner ignores HACS restore state", not contains_bticino_reference(hacs_restore)))
     checks.append(("cleaner ignores unrelated entity", not contains_bticino_reference(video_restore)))
+    # A restore entry whose free-form state text equals a legacy id must be kept:
+    # matching is on the carried entity_id, never the state text.
+    checks.append(
+        (
+            "cleaner ignores legacy-id-in-state restore",
+            not contains_bticino_reference(legacy_id_in_state),
+        )
+    )
+    # A restore entry whose object id merely contains the token as a substring
+    # must be kept (matching is on the object-id prefix).
+    checks.append(
+        (
+            "cleaner ignores object-id-substring restore",
+            not contains_bticino_reference(substring_restore),
+        )
+    )
     # A non-HACS entity with an update.* entity_id must not be misclassified.
     non_hacs_update = {
         "entity_id": f"update.{DOMAIN}_firmware",
