@@ -133,6 +133,24 @@ def _entity_domain(entity: dict[str, Any]) -> str:
     return entity_id.split(".", 1)[0] if "." in entity_id else ""
 
 
+def _object_id(entity: dict[str, Any]) -> str:
+    """Return the object id (the part of the entity_id after the dot)."""
+    entity_id = str(entity.get("entity_id", ""))
+    return entity_id.split(".", 1)[1] if "." in entity_id else entity_id
+
+
+def _is_legacy_entity(entity: dict[str, Any]) -> bool:
+    """Return true when the object id starts with a legacy naming fragment.
+
+    Matching only at the start of the object id avoids flagging a user-renamed
+    entity that merely contains a legacy fragment somewhere in the middle.
+    """
+    object_id = _object_id(entity)
+    return any(
+        object_id.startswith(fragment) for fragment in LEGACY_ENTITY_ID_FRAGMENTS
+    )
+
+
 def _check_duplicates(entities: list[dict[str, Any]]) -> list[str]:
     """Return errors for duplicated entity_id or unique_id values."""
     errors: list[str] = []
@@ -187,10 +205,7 @@ def _check_legacy_naming(entities: list[dict[str, Any]]) -> list[str]:
             action="Remove obsolete entity from the entity registry.",
         )
         for entity in entities
-        if any(
-            fragment in str(entity.get("entity_id", ""))
-            for fragment in LEGACY_ENTITY_ID_FRAGMENTS
-        )
+        if _is_legacy_entity(entity)
     ]
 
 
@@ -264,9 +279,8 @@ def _check_expected_versus_actual(
 
     # Obsolete and unexpected active entities.
     for entity in entities:
-        entity_id = str(entity.get("entity_id", ""))
         # Legacy-named entities are already reported by the legacy-naming check.
-        if any(fragment in entity_id for fragment in LEGACY_ENTITY_ID_FRAGMENTS):
+        if _is_legacy_entity(entity):
             continue
 
         unique_id = entity.get("unique_id")

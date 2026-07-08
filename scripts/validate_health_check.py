@@ -181,6 +181,15 @@ def _missing_unique_id(registry: dict[str, Any]) -> None:
     )
 
 
+def _valid_rename_with_room(registry: dict[str, Any]) -> None:
+    # A user rename that merely contains a legacy fragment mid-string (not at the
+    # start of the object id) must not be flagged as legacy. The unique id is
+    # unchanged, so the entity is still matched as present.
+    for entity in registry["data"]["entities"]:
+        if entity["unique_id"] == _unique_id("condominium_gate"):
+            entity["entity_id"] = f"button.my_entrance_hall_{DOMAIN}_condominium_gate"
+
+
 def _metadata_mismatch(registry: dict[str, Any]) -> None:
     for entity in registry["data"]["entities"]:
         if entity["unique_id"].endswith("_health_status"):
@@ -220,6 +229,14 @@ SCENARIOS: tuple[
         None,
     ),
     ("legacy naming", _legacy_naming, "FAIL", "PASS", "Legacy entity_id naming", None),
+    (
+        "valid rename mentioning a room",
+        _valid_rename_with_room,
+        "PASS",
+        "PASS",
+        None,
+        None,
+    ),
     (
         "stale deleted_entities",
         _stale_deleted,
