@@ -17,7 +17,7 @@ def clean_entity_registry(options: ToolOptions) -> bool:
     """Remove BTicino-related entries from core.entity_registry."""
 
     def mutate(registry: dict) -> dict[str, int]:
-        data = registry.get("data", {})
+        data = registry.setdefault("data", {})
         entities = data.get("entities", [])
         deleted_entities = data.get("deleted_entities", [])
 

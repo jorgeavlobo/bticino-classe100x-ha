@@ -24,7 +24,7 @@ def clean_config_entries(options: ToolOptions) -> bool:
     """Remove BTicino and BTicino-related HomeKit config entries."""
 
     def mutate(config_entries: dict) -> dict[str, int]:
-        data = config_entries.get("data", {})
+        data = config_entries.setdefault("data", {})
         entries = data.get("entries", [])
         kept = [entry for entry in entries if not _is_bticino_entry(entry)]
         data["entries"] = kept
