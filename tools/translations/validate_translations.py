@@ -95,6 +95,16 @@ def main() -> int:
             ok = False
             print(f"FAIL: required locale is missing: {name}")
 
+    # Keep REQUIRED_LOCALES authoritative: a locale file present on disk but not
+    # listed there would pass here yet be ignored by the diagnostics health
+    # check, so flag it and ask for it to be registered.
+    for name in sorted(present - set(REQUIRED_LOCALES)):
+        ok = False
+        print(
+            f"FAIL: {name} is not listed in REQUIRED_LOCALES "
+            f"(add it in tools/shared/translations.py)"
+        )
+
     for path in locale_files:
         if path.name == CANONICAL_LOCALE:
             continue
