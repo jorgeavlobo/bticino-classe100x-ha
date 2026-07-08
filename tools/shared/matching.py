@@ -52,12 +52,13 @@ def _entity_id_of(value: Any) -> str | None:
 def is_hacs_managed(value: Any) -> bool:
     """Return true when a value describes a HACS-managed entity.
 
-    A HACS entity is recognised either by its ``platform`` (entity registry
-    entries) or by its entity_id prefix (restore-state entries, which do not
-    carry the platform).
+    When the value carries a ``platform`` (entity registry entries) it is
+    trusted exclusively, so an integration-provided ``update``/``switch`` entity
+    is never misclassified. The entity_id-prefix heuristic is only used as a
+    fallback for restore-state entries, which do not carry the platform.
     """
-    if isinstance(value, dict) and value.get("platform") == HACS_PLATFORM:
-        return True
+    if isinstance(value, dict) and "platform" in value:
+        return value.get("platform") == HACS_PLATFORM
 
     entity_id = _entity_id_of(value)
     return entity_id is not None and entity_id.startswith(HACS_ENTITY_ID_PREFIXES)

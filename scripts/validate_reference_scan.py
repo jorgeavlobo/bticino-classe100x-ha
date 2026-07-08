@@ -32,7 +32,7 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 from diagnostics.find_bticino_references import find_references
 from diagnostics.shared.entities import is_bticino_entity
 from shared.cli import ToolOptions
-from shared.matching import contains_bticino_reference
+from shared.matching import contains_bticino_reference, is_hacs_managed
 
 DOMAIN = "bticino_classe100x"
 HOST = "192.168.50.251"
@@ -42,6 +42,13 @@ CONFIG_ENTRIES = {
         "entries": [
             {"entry_id": "bt1", "domain": DOMAIN, "data": {"host": HOST}},
             {"entry_id": "hacs1", "domain": "hacs", "data": {}},
+            {
+                "entry_id": "hk1",
+                "domain": "homekit",
+                "data": {
+                    "entities": [f"button.{DOMAIN}_condominium_gate"],
+                },
+            },
         ]
     }
 }
@@ -96,11 +103,22 @@ RESTORE_STATE = {
                 "state": "Condominium Gate Button Pressed",
             }
         },
+        # Unrelated entity whose STATE text happens to contain the token: the
+        # entity_id is what matters, so this must not be reported.
+        {
+            "state": {
+                "entity_id": "sensor.unrelated_note",
+                "state": f"see {DOMAIN} docs",
+            }
+        },
     ]
 }
 LOVELACE = json.dumps(
     {"cards": [{"entity": f"sensor.{DOMAIN}_health_status"}, {"name": "Condominium Gate"}]}
 )
+# A dashboard that references only an exact legacy entity id (no integration
+# token) must still be reported, matching what the clean tools remove.
+LEGACY_DASHBOARD = json.dumps({"cards": [{"entity": "button.condominium_gate"}]})
 
 
 def _write_fixture(base: Path) -> None:
@@ -111,6 +129,7 @@ def _write_fixture(base: Path) -> None:
     (storage / "core.device_registry").write_text(json.dumps(DEVICE_REGISTRY), "utf-8")
     (storage / "core.restore_state").write_text(json.dumps(RESTORE_STATE), "utf-8")
     (storage / "lovelace").write_text(LOVELACE, "utf-8")
+    (storage / "lovelace.legacy").write_text(LEGACY_DASHBOARD, "utf-8")
 
 
 def _scan() -> tuple[object, str]:
@@ -134,9 +153,18 @@ def main() -> int:
     result, output = _scan()
     checks.append(("scan completed", result.storage_found and result.unreadable == 0))
     checks.append(("no video_intercom false positive", "video_intercom" not in output))
+    checks.append(
+        ("no state-text false positive", "sensor.unrelated_note" not in output)
+    )
     checks.append(("HACS entities are informational", result.hacs >= 2))
     checks.append(("real references are confirmed", result.confirmed >= 4))
     checks.append(("HACS lines are labelled", "[HACS]" in output))
+    checks.append(
+        ("HomeKit bridge referencing BTicino is detected", "HomeKit config entry" in output)
+    )
+    checks.append(
+        ("legacy dashboard reference is detected", "button.condominium_gate" in output)
+    )
 
     bticino_entity = ENTITY_REGISTRY["data"]["entities"][0]
     hacs_entity = ENTITY_REGISTRY["data"]["entities"][1]
@@ -147,6 +175,12 @@ def main() -> int:
     checks.append(("cleaner ignores HACS entity", not contains_bticino_reference(hacs_entity)))
     checks.append(("cleaner ignores HACS restore state", not contains_bticino_reference(hacs_restore)))
     checks.append(("cleaner ignores unrelated entity", not contains_bticino_reference(video_restore)))
+    # A non-HACS entity with an update.* entity_id must not be misclassified.
+    non_hacs_update = {
+        "entity_id": f"update.{DOMAIN}_firmware",
+        "platform": DOMAIN,
+    }
+    checks.append(("non-HACS update entity is not HACS", not is_hacs_managed(non_hacs_update)))
 
     checks.append(("is_bticino_entity accepts BTicino", is_bticino_entity(bticino_entity, {"bt1"})))
     checks.append(("is_bticino_entity rejects HACS", not is_bticino_entity(hacs_entity, {"bt1"})))

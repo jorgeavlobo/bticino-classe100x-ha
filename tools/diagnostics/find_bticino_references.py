@@ -30,7 +30,11 @@ from diagnostics.shared.entities import (
 )
 from shared.cli import ToolOptions, build_parser, get_logger, parse_options
 from shared.jsonfile import read_json
-from shared.matching import contains_bticino_reference, is_hacs_managed
+from shared.matching import (
+    LEGACY_ENTITY_IDS,
+    contains_bticino_reference,
+    is_hacs_managed,
+)
 from shared.paths import storage_path
 
 # The structural token used for the free-form text scan. Legacy ids such as
@@ -116,11 +120,20 @@ def find_references(options: ToolOptions) -> ScanResult:
         else:
             config_entry_ids = set(bticino_config_entry_ids(config_entries))
             for entry in config_entries.get("data", {}).get("entries", []):
-                if entry.get("domain") == DOMAIN:
+                domain = entry.get("domain")
+                if domain == DOMAIN:
                     confirmed += 1
                     print(
                         f"{config_entries_path.name}: config entry "
                         f"{entry.get('entry_id')} (domain: {DOMAIN})"
+                    )
+                elif domain == "homekit" and contains_bticino_reference(entry):
+                    # A HomeKit bridge that exposes BTicino entities is a BTicino
+                    # reference too (clean_config_entries treats it as one).
+                    confirmed += 1
+                    print(
+                        f"{config_entries_path.name}: HomeKit config entry "
+                        f"{entry.get('entry_id')} references BTicino entities"
                     )
 
     entity_registry_path = storage / "core.entity_registry"
@@ -174,21 +187,20 @@ def find_references(options: ToolOptions) -> ScanResult:
             unreadable += 1
         else:
             for entry in restore_state.get("data", []):
-                # Match on the entry's identifiers, not its free-form state text,
+                # Match on the entry's entity_id, never its free-form state text,
                 # so an unrelated entity whose state mentions a word like
-                # "condominium" is not reported.
+                # "condominium" (or even the token) is not reported.
+                entity_id = _restore_state_entity_id(entry)
+                if not isinstance(entity_id, str):
+                    continue
+
                 if is_hacs_managed(entry):
                     hacs += 1
-                    entity_id = _restore_state_entity_id(entry)
-                    if isinstance(entity_id, str):
-                        hacs_entity_ids.add(entity_id)
+                    hacs_entity_ids.add(entity_id)
                     print(f"[HACS] {restore_state_path.name}: {entity_id}")
-                elif contains_bticino_reference(entry):
+                elif DOMAIN in entity_id or entity_id in LEGACY_ENTITY_IDS:
                     confirmed += 1
-                    print(
-                        f"{restore_state_path.name}: "
-                        f"{_restore_state_entity_id(entry)}"
-                    )
+                    print(f"{restore_state_path.name}: {entity_id}")
 
     # --- Text pass over the remaining files ---------------------------------
 
@@ -210,7 +222,13 @@ def find_references(options: ToolOptions) -> ScanResult:
             continue
 
         for index, line in enumerate(lines, start=1):
-            if STRUCTURAL_TOKEN not in line.lower():
+            lowered = line.lower()
+            # Match the integration token or an exact legacy entity id (the same
+            # ids the clean tools remove), so a stale dashboard/script reference
+            # is not missed.
+            if STRUCTURAL_TOKEN not in lowered and not any(
+                legacy_id in line for legacy_id in LEGACY_ENTITY_IDS
+            ):
                 continue
 
             if any(hacs_id in line for hacs_id in hacs_entity_ids):
