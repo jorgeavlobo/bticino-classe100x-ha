@@ -142,6 +142,23 @@ def main() -> int:
         )
     )
 
+    # Dropping one of a repeated placeholder is detected (multiset comparison,
+    # not a plain set): en has {host} twice, the candidate only once.
+    repeated_placeholder = {
+        "config": {"title": "BTicino", "note": "{host} then {host}"},
+        "entity": {"sensor": {"health": {"name": "Health"}}},
+    }
+    dropped_repeat = {
+        "config": {"title": "BTicino", "note": "{host} then done"},
+        "entity": {"sensor": {"health": {"name": "Health"}}},
+    }
+    checks.append(
+        (
+            "dropped repeated placeholder detected",
+            _has(compare(repeated_placeholder, dropped_repeat), "missing placeholder(s) ['{host}'] at config.note"),
+        )
+    )
+
     # An added placeholder that the source does not have is reported.
     added_placeholder = {
         "config": {"title": "BTicino {brand}", "note": "Connect to {host}"},

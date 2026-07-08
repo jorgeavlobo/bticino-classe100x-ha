@@ -12,6 +12,7 @@ placeholder/type diffing), shared by the standalone validator
 
 from __future__ import annotations
 
+from collections import Counter
 import re
 from typing import Any
 
@@ -56,6 +57,18 @@ def placeholders(text: Any) -> set[str]:
     if not isinstance(text, str):
         return set()
     return set(_PLACEHOLDER.findall(text))
+
+
+def placeholder_counts(text: Any) -> Counter[str]:
+    """Return a multiset of ``{placeholder}`` tokens (empty for non-str).
+
+    Counting rather than a plain set means dropping one of a repeated
+    placeholder (e.g. ``{host} … {host}`` reduced to a single ``{host}``) is
+    still detected.
+    """
+    if not isinstance(text, str):
+        return Counter()
+    return Counter(_PLACEHOLDER.findall(text))
 
 
 def canonical_issues(data: dict, path: str = "") -> list[str]:
@@ -121,15 +134,17 @@ def compare(reference: dict, candidate: dict, path: str = "") -> list[str]:
                 f"{type(cand_value).__name__}"
             )
         else:
-            missing_ph = placeholders(ref_value) - placeholders(cand_value)
-            extra_ph = placeholders(cand_value) - placeholders(ref_value)
+            ref_ph = placeholder_counts(ref_value)
+            cand_ph = placeholder_counts(cand_value)
+            missing_ph = ref_ph - cand_ph
+            extra_ph = cand_ph - ref_ph
             if missing_ph:
                 issues.append(
-                    f"missing placeholder(s) {sorted(missing_ph)} at {key_path}"
+                    f"missing placeholder(s) {sorted(missing_ph.elements())} at {key_path}"
                 )
             if extra_ph:
                 issues.append(
-                    f"unexpected placeholder(s) {sorted(extra_ph)} at {key_path}"
+                    f"unexpected placeholder(s) {sorted(extra_ph.elements())} at {key_path}"
                 )
 
     for key in candidate:
