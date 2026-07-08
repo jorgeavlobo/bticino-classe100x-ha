@@ -81,7 +81,7 @@ def _compare(reference: dict, candidate: dict, path: str = "") -> list[str]:
             issues.extend(_compare(ref_value, cand_value, key_path))
         elif ref_is_obj != cand_is_obj:
             expected = "object" if ref_is_obj else "string"
-            actual = "object" if cand_is_obj else "string"
+            actual = "object" if cand_is_obj else type(cand_value).__name__
             issues.append(
                 f"type mismatch at {key_path}: expected {expected}, got {actual}"
             )

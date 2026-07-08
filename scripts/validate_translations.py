@@ -79,6 +79,15 @@ def main() -> int:
         ("type mismatch detected", _has(_compare(REFERENCE, type_mismatch), "type mismatch at config"))
     )
 
+    # When an object is expected but the candidate is a non-string leaf (list,
+    # number, null), the reported type is the actual type, not "string".
+    checks.append(
+        (
+            "object-vs-list mismatch reports real type",
+            _has(_compare({"a": {"b": "x"}}, {"a": [1, 2]}), "type mismatch at a: expected object, got list"),
+        )
+    )
+
     # A leaf that stops being a string (null/number/bool) is a type mismatch,
     # even though it has no placeholders to compare.
     non_string_leaf = {

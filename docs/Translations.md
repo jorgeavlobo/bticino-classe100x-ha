@@ -29,10 +29,11 @@ same functionality, structure, placeholders and capabilities:
 
 ## Validating
 
-The validator compares every `translations/*.json` against `en.json` and reports
-missing keys, unexpected keys, type mismatches (object vs string) and
-`{placeholder}` mismatches. Key-order differences are reported as informational
-notes only. It never modifies the files.
+The validator compares every
+`custom_components/bticino_classe100x/translations/*.json` against the canonical
+`en.json` and reports missing keys, unexpected keys, type mismatches (object vs
+string) and `{placeholder}` mismatches. Key-order differences are reported as
+informational notes only. It never modifies the files.
 
 ```bash
 python3 tools/translations/validate_translations.py
