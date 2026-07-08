@@ -76,22 +76,33 @@ def clean_registry() -> dict[str, Any]:
     return {"data": {"entities": entities, "deleted_entities": []}}
 
 
-def _run(mutate: Callable[[dict[str, Any]], None] | None) -> tuple[str, str, list[str]]:
+def _run(
+    mutate: Callable[[dict[str, Any]], None] | None,
+    config_entries: dict[str, Any] | None = None,
+) -> tuple[str, str, list[str]]:
     registry = clean_registry()
     if mutate is not None:
         mutate(registry)
 
-    base = Path(tempfile.mkdtemp())
-    storage = base / ".storage"
-    storage.mkdir(parents=True, exist_ok=True)
-    (storage / "core.entity_registry").write_text(json.dumps(registry), encoding="utf-8")
-    (storage / "core.config_entries").write_text(
-        json.dumps(CONFIG_ENTRIES), encoding="utf-8"
-    )
+    with tempfile.TemporaryDirectory() as temp_dir:
+        base = Path(temp_dir)
+        storage = base / ".storage"
+        storage.mkdir(parents=True, exist_ok=True)
+        (storage / "core.entity_registry").write_text(
+            json.dumps(registry), encoding="utf-8"
+        )
+        (storage / "core.config_entries").write_text(
+            json.dumps(config_entries or CONFIG_ENTRIES), encoding="utf-8"
+        )
 
-    entity_result = EntityRegistryCheck().run(base)
-    metadata_result = MetadataConsistencyCheck().run(base)
-    findings = list(entity_result.errors) + list(metadata_result.warnings)
+        entity_result = EntityRegistryCheck().run(base)
+        metadata_result = MetadataConsistencyCheck().run(base)
+
+    findings = (
+        list(entity_result.errors)
+        + list(entity_result.warnings)
+        + list(metadata_result.warnings)
+    )
     return str(entity_result.status), str(metadata_result.status), findings
 
 
@@ -178,15 +189,27 @@ def _metadata_mismatch(registry: dict[str, Any]) -> None:
 
 # --- scenarios ------------------------------------------------------------
 
-SCENARIOS: tuple[tuple[str, Callable | None, str, str, str | None], ...] = (
-    # label, mutation, expected entity status, expected metadata status, substring
-    ("clean registry", None, "PASS", "PASS", None),
+MULTIPLE_CONFIG_ENTRIES = {
+    "data": {
+        "entries": [
+            {"entry_id": ENTRY_ID, "domain": DOMAIN, "data": {"host": HOST}},
+            {"entry_id": "second", "domain": DOMAIN, "data": {"host": "10.0.0.9"}},
+        ]
+    }
+}
+
+SCENARIOS: tuple[
+    tuple[str, Callable | None, str, str, str | None, dict[str, Any] | None], ...
+] = (
+    # label, mutation, entity status, metadata status, substring, config override
+    ("clean registry", None, "PASS", "PASS", None, None),
     (
         "obsolete migrated entity",
         _obsolete_migrated,
         "FAIL",
         "PASS",
         "deprecated unique_id",
+        None,
     ),
     (
         "incomplete migration",
@@ -194,17 +217,33 @@ SCENARIOS: tuple[tuple[str, Callable | None, str, str, str | None], ...] = (
         "FAIL",
         "PASS",
         "Migration incomplete",
+        None,
     ),
-    ("legacy naming", _legacy_naming, "FAIL", "PASS", "Legacy entity_id naming"),
-    ("stale deleted_entities", _stale_deleted, "FAIL", "PASS", "deleted_entities"),
-    ("missing expected entity", _missing_entity, "FAIL", "PASS", "Missing expected"),
-    ("wrong domain", _wrong_domain, "FAIL", "PASS", "wrong domain"),
+    ("legacy naming", _legacy_naming, "FAIL", "PASS", "Legacy entity_id naming", None),
+    (
+        "stale deleted_entities",
+        _stale_deleted,
+        "FAIL",
+        "PASS",
+        "deleted_entities",
+        None,
+    ),
+    (
+        "missing expected entity",
+        _missing_entity,
+        "FAIL",
+        "PASS",
+        "Missing expected",
+        None,
+    ),
+    ("wrong domain", _wrong_domain, "FAIL", "PASS", "wrong domain", None),
     (
         "stale config entry",
         _stale_config_entry,
         "FAIL",
         "PASS",
         "non-current config_entry_id",
+        None,
     ),
     (
         "missing unique_id",
@@ -212,6 +251,7 @@ SCENARIOS: tuple[tuple[str, Callable | None, str, str, str | None], ...] = (
         "FAIL",
         "PASS",
         "missing a unique_id",
+        None,
     ),
     (
         "metadata mismatch",
@@ -219,6 +259,15 @@ SCENARIOS: tuple[tuple[str, Callable | None, str, str, str | None], ...] = (
         "PASS",
         "WARNING",
         "entity_category",
+        None,
+    ),
+    (
+        "multiple config entries",
+        None,
+        "WARNING",
+        "WARNING",
+        "exactly one BTicino config entry",
+        MULTIPLE_CONFIG_ENTRIES,
     ),
 )
 
@@ -226,8 +275,8 @@ SCENARIOS: tuple[tuple[str, Callable | None, str, str, str | None], ...] = (
 def main() -> int:
     """Run every scenario and report the outcome."""
     ok = True
-    for label, mutate, want_entity, want_metadata, substring in SCENARIOS:
-        entity_status, metadata_status, findings = _run(mutate)
+    for label, mutate, want_entity, want_metadata, substring, config in SCENARIOS:
+        entity_status, metadata_status, findings = _run(mutate, config)
 
         problems = []
         if entity_status != want_entity:

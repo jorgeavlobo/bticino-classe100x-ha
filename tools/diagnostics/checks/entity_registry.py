@@ -83,15 +83,18 @@ class EntityRegistryCheck(HealthCheck):
         # not remain in the registry.
         errors.extend(_check_deleted_entities(bticino_deleted))
 
-        # Expected-versus-actual comparison needs the host to build the exact
-        # unique ids the integration would create.
-        if host is None:
-            warnings.append(
-                "Could not determine the BTicino host; skipping the "
-                "expected-versus-actual entity comparison."
-            )
-        else:
+        # The expected-versus-actual comparison builds the exact unique ids the
+        # integration would create for a single host, so it only runs when there
+        # is exactly one BTicino config entry with a known host. With several
+        # entries (one per host) a single-host comparison would misclassify the
+        # other hosts' entities, so it is skipped with a warning.
+        if len(config_entry_ids) == 1 and host is not None:
             errors.extend(_check_expected_versus_actual(bticino_entities, host))
+        else:
+            warnings.append(
+                "Skipping the expected-versus-actual entity comparison "
+                "(needs exactly one BTicino config entry with a known host)."
+            )
 
         details = [
             f"BTicino config entries found: {len(config_entry_ids)}",

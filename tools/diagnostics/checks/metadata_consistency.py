@@ -68,17 +68,23 @@ class MetadataConsistencyCheck(HealthCheck):
         registry = read_json_file(entity_registry_path)
         config_entries = read_json_file(config_entries_path)
 
+        config_entry_ids = set(bticino_config_entry_ids(config_entries))
         host = bticino_host(config_entries)
-        if host is None:
+
+        # The comparison builds the expected unique ids for a single host, so it
+        # only runs when there is exactly one BTicino config entry with a known
+        # host; several entries (one per host) would need per-host comparison.
+        if len(config_entry_ids) != 1 or host is None:
             return warning_result(
                 name=self.name,
-                summary="Skipped: BTicino host could not be determined.",
+                summary="Skipped: needs exactly one BTicino config entry with a known host.",
                 warnings=["Metadata consistency could not be verified."],
-                details=["No BTicino config entry with a host was found."],
+                details=[
+                    f"BTicino config entries found: {len(config_entry_ids)}",
+                ],
             )
 
         entities = registry.get("data", {}).get("entities", [])
-        config_entry_ids = set(bticino_config_entry_ids(config_entries))
         by_unique_id = {
             entity.get("unique_id"): entity
             for entity in find_bticino_entities(entities, config_entry_ids)
