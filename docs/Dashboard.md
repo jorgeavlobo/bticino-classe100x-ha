@@ -33,9 +33,10 @@ without any extra configuration.)
   areas or voice assistants.
 
 If you prefer, you can instead override an entity's friendly name from
-**Settings → Devices & Services → Entities → (entity) → Settings → Name**. That
-is a per-user choice and is intentionally left to you rather than forced by the
-integration.
+**Settings → Devices & Services → Entities → (entity) → Settings → Name**. This
+is stored in the entity registry and changes the name **everywhere** in Home
+Assistant (not just on one dashboard), so it is intentionally left to you rather
+than forced by the integration.
 
 ## Example dashboard
 
