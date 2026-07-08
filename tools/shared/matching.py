@@ -26,21 +26,48 @@ LEGACY_ENTITY_IDS: tuple[str, ...] = (
 # The object-id prefix of a current BTicino entity (``<domain>.<prefix><key>``).
 BTICINO_OBJECT_ID_PREFIX = "bticino_classe100x_"
 
+# Room prefixes used by an earlier naming strategy that produced object ids like
+# ``<room>_bticino_classe100x_<key>`` before the entities adopted
+# has_entity_name with a stable ``bticino_classe100x_<key>`` object id.
+LEGACY_ROOM_PREFIXES: tuple[str, ...] = (
+    "entrance_hall",
+    "living_room",
+    "kitchen",
+    "bedroom",
+    "hallway",
+)
+
+# Object-id prefixes that mark a legacy room-prefixed BTicino entity. The
+# integration name is included so a user-renamed entity that merely mentions a
+# room (for example ``living_room_gate``) is not treated as a BTicino id. This
+# is the single source of truth for the legacy room-prefix forms, re-exported by
+# ``diagnostics/checks/expected_entities.py`` so the cleanup tools, the reference
+# scan and the health check never drift.
+LEGACY_OBJECT_ID_FRAGMENTS: tuple[str, ...] = tuple(
+    f"{room}_{BTICINO_OBJECT_ID_PREFIX}" for room in LEGACY_ROOM_PREFIXES
+)
+
 
 def is_bticino_entity_id(entity_id: Any) -> bool:
     """Return true if an entity_id belongs to BTicino.
 
-    Matches the current object-id prefix (``bticino_classe100x_…``) or a known
-    legacy entity_id. The prefix is checked on the object id (after the ``.``),
-    not by substring, so an unrelated ``sensor.my_bticino_classe100x_x`` does not
-    match.
+    Matches, on the object id (the part after the ``.``), the current object-id
+    prefix (``bticino_classe100x_…``), a legacy room-prefixed form
+    (``entrance_hall_bticino_classe100x_…`` and the other known rooms), or a
+    known exact legacy entity_id. The prefixes are checked with ``startswith``,
+    never by bare substring, so an unrelated ``sensor.my_bticino_classe100x_x``
+    does not match.
     """
     if not isinstance(entity_id, str):
         return False
     if entity_id in LEGACY_ENTITY_IDS:
         return True
     object_id = entity_id.split(".", 1)[1] if "." in entity_id else entity_id
-    return object_id.startswith(BTICINO_OBJECT_ID_PREFIX)
+    if object_id.startswith(BTICINO_OBJECT_ID_PREFIX):
+        return True
+    return any(
+        object_id.startswith(fragment) for fragment in LEGACY_OBJECT_ID_FRAGMENTS
+    )
 
 
 def _entity_id_of(value: Any) -> str | None:

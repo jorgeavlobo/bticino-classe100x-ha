@@ -139,6 +139,15 @@ RESTORE_STATE = {
                 "state": "x",
             }
         },
+        # A legacy room-prefixed entity id (``<room>_bticino_classe100x_<key>``)
+        # from the old naming strategy: matched via the legacy object-id
+        # fragments, so the cleaner removes it and the scan confirms it.
+        {
+            "state": {
+                "entity_id": "button.entrance_hall_bticino_classe100x_condominium_gate",
+                "state": "idle",
+            }
+        },
     ]
 }
 LOVELACE = json.dumps(
@@ -306,6 +315,14 @@ def main() -> int:
             "sensor.my_bticino_classe100x" not in output,
         )
     )
+    # A legacy room-prefixed restore entity must be confirmed (matched via the
+    # legacy object-id fragments), mirroring what clean_restore_state removes.
+    checks.append(
+        (
+            "legacy room-prefixed restore entry is confirmed",
+            "entrance_hall_bticino_classe100x_condominium_gate" in output,
+        )
+    )
     # HACS bookkeeping files are informational: their lines must be labelled
     # [HACS] and never counted as confirmed references.
     hacs_data_lines = [
@@ -339,6 +356,7 @@ def main() -> int:
     legacy_entity = ENTITY_REGISTRY["data"]["entities"][4]
     legacy_id_in_state = RESTORE_STATE["data"][4]
     substring_restore = RESTORE_STATE["data"][5]
+    room_prefixed_restore = RESTORE_STATE["data"][6]
 
     checks.append(("cleaner matches BTicino entity", contains_bticino_reference(bticino_entity)))
     checks.append(("cleaner matches legacy registry entry", contains_bticino_reference(legacy_entity)))
@@ -359,6 +377,13 @@ def main() -> int:
         (
             "cleaner ignores object-id-substring restore",
             not contains_bticino_reference(substring_restore),
+        )
+    )
+    # A legacy room-prefixed restore entry must be removed by the cleaner.
+    checks.append(
+        (
+            "cleaner matches legacy room-prefixed restore",
+            contains_bticino_reference(room_prefixed_restore),
         )
     )
     # A non-HACS entity with an update.* entity_id must not be misclassified.

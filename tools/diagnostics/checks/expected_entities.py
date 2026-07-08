@@ -19,6 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from diagnostics.shared.entities import DOMAIN
+from shared.matching import LEGACY_OBJECT_ID_FRAGMENTS
 
 
 @dataclass(frozen=True, slots=True)
@@ -209,20 +210,8 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
 )
 
 
-# Room prefixes used by an earlier naming strategy that produced entity ids like
-# ``<room>_bticino_classe100x_<key>`` (before the entities used has_entity_name
-# with a stable ``bticino_classe100x_<key>`` object id).
-_LEGACY_ROOM_PREFIXES: tuple[str, ...] = (
-    "entrance_hall",
-    "living_room",
-    "kitchen",
-    "bedroom",
-    "hallway",
-)
-
-# Any BTicino entity_id containing one of these fragments is a legacy id. The
-# integration domain is included so a user-renamed entity that merely mentions a
-# room (for example ``living_room_gate``) is not flagged as legacy.
-LEGACY_ENTITY_ID_FRAGMENTS: tuple[str, ...] = tuple(
-    f"{room}_{DOMAIN}_" for room in _LEGACY_ROOM_PREFIXES
-)
+# The legacy room-prefixed object-id forms (``<room>_bticino_classe100x_<key>``)
+# are defined once in ``shared.matching`` and re-exported here under the name the
+# entity-registry check already imports, so the cleanup tools, the reference scan
+# and the health check share a single source of truth and never drift.
+LEGACY_ENTITY_ID_FRAGMENTS = LEGACY_OBJECT_ID_FRAGMENTS
