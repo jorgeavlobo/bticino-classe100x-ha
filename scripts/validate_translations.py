@@ -27,6 +27,11 @@ COMPONENT = Path(__file__).resolve().parents[1] / "custom_components" / "bticino
 TRANSLATIONS = COMPONENT / "translations"
 SOURCE = TRANSLATIONS / "en.json"
 
+# Locales that must always ship. Kept in sync with REQUIRED_TRANSLATIONS in
+# tools/diagnostics/checks/translations.py so an accidentally deleted locale
+# fails CI instead of being silently skipped.
+REQUIRED_LOCALES = ("en.json", "fr.json", "pt.json")
+
 
 def recursive_flatten(prefix: str, data: dict) -> dict[str, object]:
     """Flatten nested translation data exactly like Home Assistant does.
@@ -71,6 +76,13 @@ def main() -> int:
         return 1
 
     ok = True
+
+    present = {path.name for path in language_files}
+    for name in REQUIRED_LOCALES:
+        if name not in present:
+            ok = False
+            print(f"FAIL: required translation file is missing: {name}")
+
     for path in language_files:
         keys = load_keys(path)
         if keys is None:
