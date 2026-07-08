@@ -27,9 +27,13 @@ STRINGS = COMPONENT / "strings.json"
 TRANSLATIONS = COMPONENT / "translations"
 
 
-def recursive_flatten(prefix: str, data: dict) -> dict[str, str]:
-    """Flatten nested translation data exactly like Home Assistant does."""
-    output: dict[str, str] = {}
+def recursive_flatten(prefix: str, data: dict) -> dict[str, object]:
+    """Flatten nested translation data exactly like Home Assistant does.
+
+    Only the keys are used by this validator; leaf values are returned as-is and
+    are not assumed to be strings.
+    """
+    output: dict[str, object] = {}
     for key, value in data.items():
         if isinstance(value, dict):
             output.update(recursive_flatten(f"{prefix}{key}.", value))
@@ -44,6 +48,10 @@ def load_keys(path: Path) -> set[str] | None:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         print(f"ERROR: could not read {path.name}: {exc}")
+        return None
+
+    if not isinstance(data, dict):
+        print(f"ERROR: {path.name} must contain a JSON object, got {type(data).__name__}")
         return None
 
     return set(recursive_flatten("", data))
