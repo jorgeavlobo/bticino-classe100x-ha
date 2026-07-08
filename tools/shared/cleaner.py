@@ -38,7 +38,14 @@ def run_cleanup(options: ToolOptions, path: Path, mutate: Mutator) -> bool:
         log.error("Could not read %s: %s", path, exc)
         return False
 
-    removed = mutate(data)
+    try:
+        removed = mutate(data)
+    except Exception as exc:
+        # Defensive boundary: a storage file with an unexpected schema should
+        # produce a clean error and a non-zero exit code, not a traceback.
+        log.error("Could not process %s: %s", path.name, exc)
+        return False
+
     for label, count in removed.items():
         log.info("  %s: %d", label, count)
 
