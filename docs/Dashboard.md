@@ -39,9 +39,16 @@ integration.
 
 ## Example dashboard
 
-Add a new dashboard (or a view) in **YAML mode** and paste the following. Every
-Tile card uses a short `name` override, so the cards read `Condominium Gate`
-instead of `BTicino CLASSE100X Condominium Gate`.
+The snippet below is a complete dashboard (it has both `title:` and `views:`).
+Every Tile card uses a short `name` override, so the cards read
+`Condominium Gate` instead of `BTicino CLASSE100X Condominium Gate`.
+
+- **As a new dashboard**: create a dashboard, switch it to **YAML mode** (⋮ →
+  *Edit dashboard* → ⋮ → *Raw configuration editor*) and paste the whole
+  snippet.
+- **As a view on an existing dashboard**: paste only the list item under
+  `views:` (the `- title: Intercom` block and everything indented beneath it)
+  into that dashboard's existing `views:` list.
 
 ```yaml
 title: BTicino CLASSE100X
