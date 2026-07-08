@@ -34,7 +34,7 @@ def run_cleanup(options: ToolOptions, path: Path, mutate: Mutator) -> bool:
 
     try:
         data = read_json(path)
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         log.error("Could not read %s: %s", path, exc)
         return False
 
