@@ -20,7 +20,7 @@ def _is_bticino_entry(entry: dict) -> bool:
     )
 
 
-def clean_config_entries(options: ToolOptions) -> None:
+def clean_config_entries(options: ToolOptions) -> bool:
     """Remove BTicino and BTicino-related HomeKit config entries."""
 
     def mutate(config_entries: dict) -> dict[str, int]:
@@ -31,13 +31,14 @@ def clean_config_entries(options: ToolOptions) -> None:
 
         return {"config entries": len(entries) - len(kept)}
 
-    run_cleanup(options, config_entries_path(options.config_path), mutate)
+    return run_cleanup(options, config_entries_path(options.config_path), mutate)
 
 
 def main() -> None:
     """Run the config entries cleanup tool."""
     parser = build_parser("Clean BTicino entries from core.config_entries")
-    clean_config_entries(parse_options(parser))
+    if not clean_config_entries(parse_options(parser)):
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ from shared.matching import contains_bticino_reference
 from shared.paths import restore_state_path
 
 
-def clean_restore_state(options: ToolOptions) -> None:
+def clean_restore_state(options: ToolOptions) -> bool:
     """Remove BTicino-related entries from core.restore_state."""
 
     def mutate(restore_state: dict) -> dict[str, int]:
@@ -23,13 +23,14 @@ def clean_restore_state(options: ToolOptions) -> None:
 
         return {"restore state entries": len(entries) - len(kept)}
 
-    run_cleanup(options, restore_state_path(options.config_path), mutate)
+    return run_cleanup(options, restore_state_path(options.config_path), mutate)
 
 
 def main() -> None:
     """Run the restore state cleanup tool."""
     parser = build_parser("Clean BTicino entries from core.restore_state")
-    clean_restore_state(parse_options(parser))
+    if not clean_restore_state(parse_options(parser)):
+        sys.exit(1)
 
 
 if __name__ == "__main__":

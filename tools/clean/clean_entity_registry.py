@@ -13,7 +13,7 @@ from shared.matching import contains_bticino_reference
 from shared.paths import entity_registry_path
 
 
-def clean_entity_registry(options: ToolOptions) -> None:
+def clean_entity_registry(options: ToolOptions) -> bool:
     """Remove BTicino-related entries from core.entity_registry."""
 
     def mutate(registry: dict) -> dict[str, int]:
@@ -38,13 +38,14 @@ def clean_entity_registry(options: ToolOptions) -> None:
             "deleted entities": len(deleted_entities) - len(kept_deleted),
         }
 
-    run_cleanup(options, entity_registry_path(options.config_path), mutate)
+    return run_cleanup(options, entity_registry_path(options.config_path), mutate)
 
 
 def main() -> None:
     """Run the entity registry cleanup tool."""
     parser = build_parser("Clean BTicino entities from core.entity_registry")
-    clean_entity_registry(parse_options(parser))
+    if not clean_entity_registry(parse_options(parser)):
+        sys.exit(1)
 
 
 if __name__ == "__main__":

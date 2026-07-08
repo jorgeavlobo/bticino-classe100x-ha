@@ -19,16 +19,22 @@ def main() -> None:
     options = parse_options(parser)
     log = get_logger()
 
+    results = []
+
     log.info("Cleaning BTicino CLASSE100X config entries...")
-    clean_config_entries(options)
+    results.append(clean_config_entries(options))
 
     log.info("Cleaning BTicino CLASSE100X entity registry...")
-    clean_entity_registry(options)
+    results.append(clean_entity_registry(options))
 
     log.info("Cleaning BTicino CLASSE100X restore state...")
-    clean_restore_state(options)
+    results.append(clean_restore_state(options))
 
-    log.info("Cleanup completed.")
+    if all(results):
+        log.info("Cleanup completed.")
+    else:
+        log.error("Cleanup finished with errors.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

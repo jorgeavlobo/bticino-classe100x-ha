@@ -15,24 +15,28 @@ from shared.jsonfile import read_json, write_json
 Mutator = Callable[[dict], dict[str, int]]
 
 
-def run_cleanup(options: ToolOptions, path: Path, mutate: Mutator) -> None:
+def run_cleanup(options: ToolOptions, path: Path, mutate: Mutator) -> bool:
     """Apply a cleanup to a storage file, backing up and confirming first.
 
     The file is read, ``mutate`` removes the matching entries, and the result is
     only written back when this is not a dry run, the user confirms, and (unless
     ``--no-backup``) a backup has been created.
+
+    Returns ``True`` when the outcome is expected (updated, nothing to do, dry
+    run, or a deliberate skip) and ``False`` only when the operation could not be
+    completed (read, backup or write failure), so callers can set the exit code.
     """
     log = get_logger()
 
     if not path.exists():
         log.warning("Not found, skipping: %s", path)
-        return
+        return True
 
     try:
         data = read_json(path)
     except (OSError, json.JSONDecodeError) as exc:
         log.error("Could not read %s: %s", path, exc)
-        return
+        return False
 
     removed = mutate(data)
     for label, count in removed.items():
@@ -41,7 +45,7 @@ def run_cleanup(options: ToolOptions, path: Path, mutate: Mutator) -> None:
     total = sum(removed.values())
     if total == 0:
         log.info("Nothing to remove in %s", path.name)
-        return
+        return True
 
     if options.dry_run:
         log.info(
@@ -49,24 +53,24 @@ def run_cleanup(options: ToolOptions, path: Path, mutate: Mutator) -> None:
             path.name,
             total,
         )
-        return
+        return True
 
     if not confirm(
         f"Remove {total} entry/entries from {path.name}?", options.assume_yes
     ):
         log.info("Skipped %s", path.name)
-        return
+        return True
 
     if options.backup:
         try:
             backup_path = create_backup(path)
         except OSError as exc:
             log.error("Could not back up %s: %s; aborting", path.name, exc)
-            return
+            return False
 
         if backup_path is None:
             log.error("Could not back up %s (file missing); aborting", path.name)
-            return
+            return False
 
         log.info("Backup created: %s", backup_path)
     else:
@@ -76,6 +80,7 @@ def run_cleanup(options: ToolOptions, path: Path, mutate: Mutator) -> None:
         write_json(path, data)
     except OSError as exc:
         log.error("Could not write %s: %s", path, exc)
-        return
+        return False
 
     log.info("Updated %s", path.name)
+    return True
