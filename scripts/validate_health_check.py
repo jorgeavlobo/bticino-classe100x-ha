@@ -5,7 +5,8 @@ Builds synthetic ``.storage`` fixtures from the expected-entity spec and asserts
 that the entity-registry and metadata-consistency checks reach the right
 verdict: a clean registry passes, and each class of problem (obsolete migrated
 entity, incomplete migration, legacy naming, stale ``deleted_entities``, missing
-entity, and a metadata mismatch) is detected.
+entity, wrong-domain entity, stale config entry, missing unique id, and a
+metadata mismatch) is detected.
 
 This locks in the detection logic so it cannot silently regress. It does not
 import Home Assistant, so it runs anywhere:
@@ -29,19 +30,21 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 from diagnostics.checks.entity_registry import EntityRegistryCheck
 from diagnostics.checks.expected_entities import EXPECTED_ENTITIES
 from diagnostics.checks.metadata_consistency import MetadataConsistencyCheck
+from diagnostics.shared.entities import DOMAIN
 
 HOST = "192.168.50.251"
+ENTRY_ID = "abc"
 CONFIG_ENTRIES = {
     "data": {
         "entries": [
-            {
-                "entry_id": "abc",
-                "domain": "bticino_classe100x",
-                "data": {"host": HOST},
-            }
+            {"entry_id": ENTRY_ID, "domain": DOMAIN, "data": {"host": HOST}}
         ]
     }
 }
+
+
+def _unique_id(suffix: str) -> str:
+    return f"{DOMAIN}_{HOST}_{suffix}"
 
 
 def _capabilities(entity: Any) -> dict[str, Any] | None:
@@ -58,8 +61,8 @@ def clean_registry() -> dict[str, Any]:
         {
             "entity_id": expected.default_entity_id,
             "unique_id": expected.unique_id(HOST),
-            "platform": "bticino_classe100x",
-            "config_entry_id": "abc",
+            "platform": DOMAIN,
+            "config_entry_id": ENTRY_ID,
             "translation_key": expected.translation_key,
             "entity_category": expected.entity_category,
             "original_device_class": expected.original_device_class,
@@ -97,18 +100,18 @@ def _run(mutate: Callable[[dict[str, Any]], None] | None) -> tuple[str, str, lis
 
 def _obsolete_migrated(registry: dict[str, Any]) -> None:
     for entity in registry["data"]["entities"]:
-        if entity["unique_id"] == f"bticino_classe100x_{HOST}_connection":
-            entity["unique_id"] = f"bticino_classe100x_{HOST}_connection_status"
-            entity["entity_id"] = "binary_sensor.bticino_classe100x_connection_status"
+        if entity["unique_id"] == _unique_id("connection"):
+            entity["unique_id"] = _unique_id("connection_status")
+            entity["entity_id"] = f"binary_sensor.{DOMAIN}_connection_status"
 
 
 def _incomplete_migration(registry: dict[str, Any]) -> None:
     registry["data"]["entities"].append(
         {
             "entity_id": "binary_sensor.old_conn",
-            "unique_id": f"bticino_classe100x_{HOST}_connection_status",
-            "platform": "bticino_classe100x",
-            "config_entry_id": "abc",
+            "unique_id": _unique_id("connection_status"),
+            "platform": DOMAIN,
+            "config_entry_id": ENTRY_ID,
             "orphaned_timestamp": None,
         }
     )
@@ -117,10 +120,10 @@ def _incomplete_migration(registry: dict[str, Any]) -> None:
 def _legacy_naming(registry: dict[str, Any]) -> None:
     registry["data"]["entities"].append(
         {
-            "entity_id": "button.entrance_hall_bticino_classe100x_condominium_gate",
-            "unique_id": f"bticino_classe100x_{HOST}_legacy_gate",
-            "platform": "bticino_classe100x",
-            "config_entry_id": "abc",
+            "entity_id": f"button.entrance_hall_{DOMAIN}_condominium_gate",
+            "unique_id": _unique_id("legacy_gate"),
+            "platform": DOMAIN,
+            "config_entry_id": ENTRY_ID,
             "orphaned_timestamp": None,
         }
     )
@@ -129,9 +132,9 @@ def _legacy_naming(registry: dict[str, Any]) -> None:
 def _stale_deleted(registry: dict[str, Any]) -> None:
     registry["data"]["deleted_entities"].append(
         {
-            "entity_id": "sensor.bticino_classe100x_old",
-            "unique_id": f"bticino_classe100x_{HOST}_old_metric",
-            "platform": "bticino_classe100x",
+            "entity_id": f"sensor.{DOMAIN}_old",
+            "unique_id": _unique_id("old_metric"),
+            "platform": DOMAIN,
         }
     )
 
@@ -142,6 +145,29 @@ def _missing_entity(registry: dict[str, Any]) -> None:
         for entity in registry["data"]["entities"]
         if not entity["unique_id"].endswith("_uptime")
     ]
+
+
+def _wrong_domain(registry: dict[str, Any]) -> None:
+    for entity in registry["data"]["entities"]:
+        if entity["unique_id"] == _unique_id("connection"):
+            # Correct unique id, wrong domain (sensor instead of binary_sensor).
+            entity["entity_id"] = f"sensor.{DOMAIN}_connection_status"
+
+
+def _stale_config_entry(registry: dict[str, Any]) -> None:
+    registry["data"]["entities"][0]["config_entry_id"] = "obsolete-entry"
+
+
+def _missing_unique_id(registry: dict[str, Any]) -> None:
+    registry["data"]["entities"].append(
+        {
+            "entity_id": f"sensor.{DOMAIN}_ghost",
+            "unique_id": None,
+            "platform": DOMAIN,
+            "config_entry_id": ENTRY_ID,
+            "orphaned_timestamp": None,
+        }
+    )
 
 
 def _metadata_mismatch(registry: dict[str, Any]) -> None:
@@ -167,11 +193,26 @@ SCENARIOS: tuple[tuple[str, Callable | None, str, str, str | None], ...] = (
         _incomplete_migration,
         "FAIL",
         "PASS",
-        "Migration incomplete.",
+        "Migration incomplete",
     ),
     ("legacy naming", _legacy_naming, "FAIL", "PASS", "Legacy entity_id naming"),
     ("stale deleted_entities", _stale_deleted, "FAIL", "PASS", "deleted_entities"),
     ("missing expected entity", _missing_entity, "FAIL", "PASS", "Missing expected"),
+    ("wrong domain", _wrong_domain, "FAIL", "PASS", "wrong domain"),
+    (
+        "stale config entry",
+        _stale_config_entry,
+        "FAIL",
+        "PASS",
+        "non-current config_entry_id",
+    ),
+    (
+        "missing unique_id",
+        _missing_unique_id,
+        "FAIL",
+        "PASS",
+        "missing a unique_id",
+    ),
     (
         "metadata mismatch",
         _metadata_mismatch,

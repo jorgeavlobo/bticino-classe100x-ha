@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-DOMAIN = "bticino_classe100x"
+from diagnostics.shared.entities import DOMAIN
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,16 +215,3 @@ LEGACY_ENTITY_ID_FRAGMENTS: tuple[str, ...] = (
     "bedroom_",
     "hallway_",
 )
-
-
-def expected_unique_keys() -> set[str]:
-    """Return every valid unique-id suffix."""
-    return {entity.unique_key for entity in EXPECTED_ENTITIES}
-
-
-def deprecated_unique_keys() -> set[str]:
-    """Return every deprecated unique-id suffix across all entities."""
-    keys: set[str] = set()
-    for entity in EXPECTED_ENTITIES:
-        keys.update(entity.deprecated_unique_keys)
-    return keys

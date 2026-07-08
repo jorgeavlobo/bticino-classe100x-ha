@@ -17,7 +17,12 @@ from diagnostics.shared.entities import (
     bticino_host,
     find_bticino_entities,
 )
-from diagnostics.shared.result import HealthCheckResult, fail_result, pass_result
+from diagnostics.shared.result import (
+    HealthCheckResult,
+    fail_result,
+    pass_result,
+    warning_result,
+)
 from diagnostics.shared.storage import read_json_file, storage_file
 
 
@@ -58,7 +63,6 @@ class EntityRegistryCheck(HealthCheck):
 
         errors: list[str] = []
         warnings: list[str] = []
-        details: list[str] = []
 
         if not config_entry_ids:
             warnings.append("No BTicino config entry was found.")
@@ -72,7 +76,7 @@ class EntityRegistryCheck(HealthCheck):
 
         # Structural integrity of the active entities.
         errors.extend(_check_duplicates(bticino_entities))
-        errors.extend(_check_orphans_and_null_config(bticino_entities))
+        errors.extend(_check_orphans_and_config(bticino_entities, config_entry_ids))
         errors.extend(_check_legacy_naming(bticino_entities))
 
         # Deleted BTicino entities are historical migration artefacts and should
@@ -83,20 +87,18 @@ class EntityRegistryCheck(HealthCheck):
         # unique ids the integration would create.
         if host is None:
             warnings.append(
-                "Could not determine the BTicino host; skipping "
+                "Could not determine the BTicino host; skipping the "
                 "expected-versus-actual entity comparison."
             )
         else:
             errors.extend(_check_expected_versus_actual(bticino_entities, host))
 
-        details.extend(
-            [
-                f"BTicino config entries found: {len(config_entry_ids)}",
-                f"BTicino entities found: {len(bticino_entities)}",
-                f"BTicino deleted entities found: {len(bticino_deleted)}",
-                f"Expected entities: {len(EXPECTED_ENTITIES)}",
-            ]
-        )
+        details = [
+            f"BTicino config entries found: {len(config_entry_ids)}",
+            f"BTicino entities found: {len(bticino_entities)}",
+            f"BTicino deleted entities found: {len(bticino_deleted)}",
+            f"Expected entities: {len(EXPECTED_ENTITIES)}",
+        ]
 
         if errors:
             return fail_result(
@@ -107,11 +109,25 @@ class EntityRegistryCheck(HealthCheck):
                 details=details,
             )
 
+        if warnings:
+            return warning_result(
+                name=self.name,
+                summary="Entity registry could not be fully validated.",
+                warnings=warnings,
+                details=details,
+            )
+
         return pass_result(
             name=self.name,
             summary="Entity registry looks healthy.",
-            details=details + warnings,
+            details=details,
         )
+
+
+def _entity_domain(entity: dict[str, Any]) -> str:
+    """Return the entity domain (the part of the entity_id before the dot)."""
+    entity_id = str(entity.get("entity_id", ""))
+    return entity_id.split(".", 1)[0] if "." in entity_id else ""
 
 
 def _check_duplicates(entities: list[dict[str, Any]]) -> list[str]:
@@ -135,135 +151,159 @@ def _check_duplicates(entities: list[dict[str, Any]]) -> list[str]:
     return errors
 
 
-def _check_orphans_and_null_config(entities: list[dict[str, Any]]) -> list[str]:
-    """Return errors for orphaned entities and entities with no config entry."""
+def _check_orphans_and_config(
+    entities: list[dict[str, Any]], config_entry_ids: set[str]
+) -> list[str]:
+    """Return errors for orphaned entities and bad config-entry links."""
     errors: list[str] = []
 
-    orphaned = [
-        e.get("entity_id")
-        for e in entities
-        if e.get("orphaned_timestamp") is not None
-    ]
-    null_config = [
-        e.get("entity_id")
-        for e in entities
-        if e.get("config_entry_id") is None
-    ]
+    for entity in entities:
+        entity_id = entity.get("entity_id")
 
-    if orphaned:
-        errors.append("Orphaned BTicino entities found:")
-        errors.extend(f"  {entity_id}" for entity_id in orphaned)
+        if entity.get("orphaned_timestamp") is not None:
+            errors.append(f"Orphaned BTicino entity: {entity_id}")
 
-    if null_config:
-        errors.append("BTicino entities with null config_entry_id found:")
-        errors.extend(f"  {entity_id}" for entity_id in null_config)
+        config_entry_id = entity.get("config_entry_id")
+        if config_entry_id is None:
+            errors.append(f"BTicino entity with null config_entry_id: {entity_id}")
+        elif config_entry_id not in config_entry_ids:
+            errors.append(
+                f"BTicino entity linked to a non-current config_entry_id: "
+                f"{entity_id} (config_entry_id: {config_entry_id})"
+            )
 
     return errors
 
 
 def _check_legacy_naming(entities: list[dict[str, Any]]) -> list[str]:
     """Return errors for entities using legacy entity_id naming."""
-    errors: list[str] = []
-
-    for entity in entities:
-        entity_id = str(entity.get("entity_id", ""))
-        if any(fragment in entity_id for fragment in LEGACY_ENTITY_ID_FRAGMENTS):
-            errors.extend(
-                _format_obsolete(
-                    entity,
-                    reason="Legacy entity_id naming from a previous version.",
-                    action="Remove obsolete entity from the entity registry.",
-                )
-            )
-
-    return errors
+    return [
+        _format_obsolete(
+            entity,
+            reason="Legacy entity_id naming from a previous version.",
+            action="Remove obsolete entity from the entity registry.",
+        )
+        for entity in entities
+        if any(
+            fragment in str(entity.get("entity_id", ""))
+            for fragment in LEGACY_ENTITY_ID_FRAGMENTS
+        )
+    ]
 
 
 def _check_deleted_entities(deleted: list[dict[str, Any]]) -> list[str]:
     """Return errors for BTicino entities lingering in deleted_entities."""
-    errors: list[str] = []
+    if not deleted:
+        return []
 
-    if deleted:
-        errors.append(
-            f"BTicino entities remain in deleted_entities: {len(deleted)}"
+    errors = [f"BTicino entities remain in deleted_entities: {len(deleted)}"]
+    errors.extend(
+        _format_obsolete(
+            entity,
+            reason="Stale entry in deleted_entities from a past migration.",
+            action="Remove the stale entry from deleted_entities.",
         )
-        for entity in deleted:
-            errors.extend(
-                _format_obsolete(
-                    entity,
-                    reason="Stale entry in deleted_entities from a past migration.",
-                    action="Remove the stale entry from deleted_entities.",
-                )
-            )
-
+        for entity in deleted
+    )
     return errors
 
 
 def _check_expected_versus_actual(
     entities: list[dict[str, Any]], host: str
 ) -> list[str]:
-    """Compare the active BTicino entities against the expected set."""
+    """Compare the active BTicino entities against the expected set.
+
+    Entities are matched on ``(domain, unique_id)`` — the same identity Home
+    Assistant enforces — so an entry with the right unique id under the wrong
+    domain is treated as a wrong-domain artefact, not a valid entity.
+    """
     errors: list[str] = []
 
-    expected_by_unique_id = {
-        entity.unique_id(host): entity for entity in EXPECTED_ENTITIES
+    expected_by_key = {
+        (entity.platform, entity.unique_id(host)): entity
+        for entity in EXPECTED_ENTITIES
     }
-    deprecated_by_unique_id: dict[str, Any] = {}
+    deprecated_by_key: dict[tuple[str, str], Any] = {}
+    expected_domains_by_unique_id: dict[str, set[str]] = {}
     for entity in EXPECTED_ENTITIES:
+        expected_domains_by_unique_id.setdefault(entity.unique_id(host), set()).add(
+            entity.platform
+        )
         for old_key in entity.deprecated_unique_keys:
-            deprecated_by_unique_id[f"{DOMAIN}_{host}_{old_key}"] = entity
+            deprecated_by_key[(entity.platform, f"{DOMAIN}_{host}_{old_key}")] = entity
 
-    present_unique_ids = {
-        e.get("unique_id") for e in entities if e.get("unique_id")
+    present_keys = {
+        (_entity_domain(entity), entity["unique_id"])
+        for entity in entities
+        if entity.get("unique_id")
     }
 
     # Missing expected entities.
-    for unique_id, expected in expected_by_unique_id.items():
-        if unique_id not in present_unique_ids:
+    for (domain, unique_id), expected in expected_by_key.items():
+        if (domain, unique_id) not in present_keys:
             errors.append(
                 f"Missing expected BTicino entity: {expected.default_entity_id} "
                 f"(unique_id: {unique_id})"
             )
 
     # Incomplete migrations: a new unique id and one of its deprecated
-    # predecessors both present.
-    for old_unique_id, expected in deprecated_by_unique_id.items():
+    # predecessors both present in the same domain.
+    for (domain, old_unique_id), expected in deprecated_by_key.items():
         new_unique_id = expected.unique_id(host)
-        if old_unique_id in present_unique_ids and new_unique_id in present_unique_ids:
-            errors.append("Migration incomplete.")
-            errors.append(f"  Expected unique_id: {new_unique_id}")
-            errors.append(f"  Obsolete unique_id still present: {old_unique_id}")
+        if (domain, old_unique_id) in present_keys and (
+            domain,
+            new_unique_id,
+        ) in present_keys:
             errors.append(
-                "  Suggested action: remove the obsolete migrated entity."
+                f"Migration incomplete: expected {new_unique_id}, obsolete "
+                f"{old_unique_id} still present — remove the obsolete migrated entity."
             )
 
     # Obsolete and unexpected active entities.
     for entity in entities:
-        # Legacy-named entities are already reported by the legacy-naming check.
         entity_id = str(entity.get("entity_id", ""))
+        # Legacy-named entities are already reported by the legacy-naming check.
         if any(fragment in entity_id for fragment in LEGACY_ENTITY_ID_FRAGMENTS):
             continue
 
         unique_id = entity.get("unique_id")
-        if unique_id in expected_by_unique_id or unique_id is None:
-            expected = expected_by_unique_id.get(unique_id)
-            if expected is not None and entity.get("platform") not in (DOMAIN, None):
-                errors.append(
-                    f"BTicino entity on unexpected platform: "
-                    f"{entity.get('entity_id')} (platform: {entity.get('platform')})"
+        if unique_id is None:
+            errors.append(
+                _format_obsolete(
+                    entity,
+                    reason="BTicino entity is missing a unique_id.",
+                    action="Remove the entity if it is a leftover from a past version.",
                 )
+            )
             continue
 
-        if unique_id in deprecated_by_unique_id:
-            errors.extend(
+        domain = _entity_domain(entity)
+        if (domain, unique_id) in expected_by_key:
+            continue
+
+        if (domain, unique_id) in deprecated_by_key:
+            errors.append(
                 _format_obsolete(
                     entity,
                     reason="Obsolete migrated entity (deprecated unique_id).",
                     action="Remove obsolete entity from the entity registry.",
                 )
             )
+        elif unique_id in expected_domains_by_unique_id and (
+            domain not in expected_domains_by_unique_id[unique_id]
+        ):
+            expected_domains = ", ".join(
+                sorted(expected_domains_by_unique_id[unique_id])
+            )
+            errors.append(
+                _format_obsolete(
+                    entity,
+                    reason=f"Entity is in the wrong domain (expected {expected_domains}).",
+                    action="Remove the wrong-domain entity from the entity registry.",
+                )
+            )
         else:
-            errors.extend(
+            errors.append(
                 _format_obsolete(
                     entity,
                     reason="Unexpected BTicino entity (unrecognised unique_id).",
@@ -274,15 +314,13 @@ def _check_expected_versus_actual(
     return errors
 
 
-def _format_obsolete(entity: dict[str, Any], reason: str, action: str) -> list[str]:
-    """Return readable, cleanup-oriented details for an obsolete entity."""
-    return [
-        "Obsolete BTicino entity found:",
-        f"  Entity ID: {entity.get('entity_id')}",
-        f"  Unique ID: {entity.get('unique_id')}",
-        f"  Reason: {reason}",
-        f"  Suggested action: {action}",
-    ]
+def _format_obsolete(entity: dict[str, Any], reason: str, action: str) -> str:
+    """Return a single-line, cleanup-oriented finding for an obsolete entity."""
+    return (
+        f"Obsolete BTicino entity: {entity.get('entity_id')} "
+        f"(unique_id: {entity.get('unique_id')}) — {reason} "
+        f"Suggested action: {action}"
+    )
 
 
 def _find_duplicates(values: list[str]) -> list[str]:

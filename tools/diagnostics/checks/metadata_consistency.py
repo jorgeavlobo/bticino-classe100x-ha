@@ -70,9 +70,10 @@ class MetadataConsistencyCheck(HealthCheck):
 
         host = bticino_host(config_entries)
         if host is None:
-            return pass_result(
+            return warning_result(
                 name=self.name,
                 summary="Skipped: BTicino host could not be determined.",
+                warnings=["Metadata consistency could not be verified."],
                 details=["No BTicino config entry with a host was found."],
             )
 
@@ -150,7 +151,7 @@ def _compare_metadata(
     warnings: list[str] = []
     for field_name, expected_value, actual_value in comparisons:
         if expected_value != actual_value:
-            warnings.extend(
+            warnings.append(
                 _format_mismatch(
                     entity_id=str(entity.get("entity_id")),
                     field=field_name,
@@ -162,15 +163,9 @@ def _compare_metadata(
     return warnings
 
 
-def _format_mismatch(
-    entity_id: str, field: str, expected: Any, actual: Any
-) -> list[str]:
-    """Return readable details for a single metadata mismatch."""
-    return [
-        "Metadata mismatch detected:",
-        f"  Entity: {entity_id}",
-        f"  Field: {field}",
-        f"  Expected: {expected!r}",
-        f"  Actual: {actual!r}",
-        f"  Suggested action: {_SUGGESTED_ACTION}",
-    ]
+def _format_mismatch(entity_id: str, field: str, expected: Any, actual: Any) -> str:
+    """Return a single-line finding for a metadata mismatch."""
+    return (
+        f"Metadata mismatch: {entity_id} field '{field}' "
+        f"expected {expected!r}, got {actual!r} — {_SUGGESTED_ACTION}"
+    )
