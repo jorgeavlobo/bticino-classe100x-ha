@@ -1,65 +1,76 @@
 # BTicino CLASSE100X Tools
 
-This folder contains maintenance and diagnostic tools for the BTicino CLASSE100X Home Assistant integration.
+This folder contains maintenance and diagnostic tools for the BTicino CLASSE100X
+Home Assistant integration.
 
 These tools are intended for developers and advanced users.
 
-------------------------------------------------------------
-IMPORTANT
-------------------------------------------------------------
+## Important
 
-Always stop Home Assistant Core before modifying files inside:
-
-    /config/.storage
-
-Recommended workflow:
+Always stop Home Assistant Core before modifying files inside `/config/.storage`:
 
 1. Stop Home Assistant Core
 
-    ha core stop
+       ha core stop
 
-2. Execute the desired tool
+2. Run the desired tool
 
 3. Start Home Assistant Core
 
-    ha core start
+       ha core start
 
-------------------------------------------------------------
-AVAILABLE TOOLS
-------------------------------------------------------------
+You can also run the tools against an **offline copy** of your configuration
+(for example a restored backup) by pointing `--config` at a directory that
+contains a `.storage` folder. This never touches your live instance.
 
-Clean tools
+## Common options
 
-    clean_everything.py
+All tools accept:
 
-        Cleans every BTicino-related Home Assistant file.
+| Option | Description |
+|--------|-------------|
+| `--config PATH` | Home Assistant config directory, or an offline copy containing `.storage` (default: `/config`). |
+| `--verbose` | Print more detailed output. |
 
-    clean_entity_registry.py
+The cleanup tools additionally accept:
 
-        Cleans BTicino entities from core.entity_registry.
+| Option | Description |
+|--------|-------------|
+| `--dry-run` | Show what would be removed without modifying any file. |
+| `--yes` | Do not ask for confirmation before modifying a file. |
+| `--no-backup` | Do not create a backup before modifying a file (not recommended). |
 
-    clean_restore_state.py
+## Cleanup tools
 
-        Cleans BTicino entries from core.restore_state.
+| Tool | Description |
+|------|-------------|
+| `clean/clean_everything.py` | Runs every BTicino cleanup tool. |
+| `clean/clean_entity_registry.py` | Removes BTicino entities from `core.entity_registry`. |
+| `clean/clean_restore_state.py` | Removes BTicino entries from `core.restore_state`. |
+| `clean/clean_config_entries.py` | Removes BTicino (and BTicino-related HomeKit) config entries. |
 
-    clean_config_entries.py
+Preview first, then apply:
 
-        Removes BTicino config entries.
+    python3 tools/clean/clean_everything.py --config /config --dry-run
+    python3 tools/clean/clean_everything.py --config /config
 
-------------------------------------------------------------
+## Diagnostic tools
 
-Diagnostic tools
+| Tool | Description |
+|------|-------------|
+| `diagnostics/find_bticino_references.py` | Lists BTicino references found in the Home Assistant storage files (backups are ignored). |
 
-    find_bticino_references.py
+    python3 tools/diagnostics/find_bticino_references.py --config /config
 
-        Searches the Home Assistant configuration and storage files
-        for BTicino references.
+## Safety
 
-------------------------------------------------------------
-
-SAFETY
-
-Every cleanup tool automatically creates a timestamped backup
-before modifying any Home Assistant file.
-
-Always verify the backup exists before continuing.
+- By default each cleanup tool creates a timestamped backup (for example
+  `core.entity_registry.backup_20260101_120000`) next to the file **before**
+  modifying it. Use `--no-backup` only if you have your own backup.
+- Cleanup tools ask for confirmation before writing. Run with `--yes` for
+  non-interactive use. If stdin is not interactive and `--yes` is not given, the
+  tool makes no changes.
+- Use `--dry-run` to preview the exact number of entries that would be removed
+  without changing anything.
+- The tools validate that `--config` points to an existing directory and skip
+  files that are missing or cannot be parsed instead of failing destructively.

@@ -1,0 +1,73 @@
+"""Safe cleanup routine shared by the clean tools."""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+import json
+from pathlib import Path
+
+from shared.backup import create_backup
+from shared.cli import ToolOptions, confirm, get_logger
+from shared.jsonfile import read_json, write_json
+
+# A mutator reads the decoded storage file, removes the BTicino entries in place
+# and returns a mapping of ``{label: removed_count}`` for reporting.
+Mutator = Callable[[dict], dict[str, int]]
+
+
+def run_cleanup(options: ToolOptions, path: Path, mutate: Mutator) -> None:
+    """Apply a cleanup to a storage file, backing up and confirming first.
+
+    The file is read, ``mutate`` removes the matching entries, and the result is
+    only written back when this is not a dry run, the user confirms, and (unless
+    ``--no-backup``) a backup has been created.
+    """
+    log = get_logger()
+
+    if not path.exists():
+        log.warning("Not found, skipping: %s", path)
+        return
+
+    try:
+        data = read_json(path)
+    except (OSError, json.JSONDecodeError) as exc:
+        log.error("Could not read %s: %s", path, exc)
+        return
+
+    removed = mutate(data)
+    for label, count in removed.items():
+        log.info("  %s: %d", label, count)
+
+    total = sum(removed.values())
+    if total == 0:
+        log.info("Nothing to remove in %s", path.name)
+        return
+
+    if options.dry_run:
+        log.info(
+            "Dry run: %s left unchanged (%d entry/entries would be removed)",
+            path.name,
+            total,
+        )
+        return
+
+    if not confirm(
+        f"Remove {total} entry/entries from {path.name}?", options.assume_yes
+    ):
+        log.info("Skipped %s", path.name)
+        return
+
+    if options.backup:
+        backup_path = create_backup(path)
+        if backup_path:
+            log.info("Backup created: %s", backup_path)
+    else:
+        log.warning("Skipping backup for %s (--no-backup)", path.name)
+
+    try:
+        write_json(path, data)
+    except OSError as exc:
+        log.error("Could not write %s: %s", path, exc)
+        return
+
+    log.info("Updated %s", path.name)
