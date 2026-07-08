@@ -205,13 +205,20 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
 )
 
 
-# Legacy entity_id fragments left behind by earlier naming strategies (before the
-# entities used has_entity_name with a stable ``bticino_classe100x_<key>`` object
-# id). Any BTicino entity_id containing one of these is obsolete.
-LEGACY_ENTITY_ID_FRAGMENTS: tuple[str, ...] = (
-    "entrance_hall_",
-    "living_room_",
-    "kitchen_",
-    "bedroom_",
-    "hallway_",
+# Room prefixes used by an earlier naming strategy that produced entity ids like
+# ``<room>_bticino_classe100x_<key>`` (before the entities used has_entity_name
+# with a stable ``bticino_classe100x_<key>`` object id).
+_LEGACY_ROOM_PREFIXES: tuple[str, ...] = (
+    "entrance_hall",
+    "living_room",
+    "kitchen",
+    "bedroom",
+    "hallway",
+)
+
+# Any BTicino entity_id containing one of these fragments is a legacy id. The
+# integration domain is included so a user-renamed entity that merely mentions a
+# room (for example ``living_room_gate``) is not flagged as legacy.
+LEGACY_ENTITY_ID_FRAGMENTS: tuple[str, ...] = tuple(
+    f"{room}_{DOMAIN}_" for room in _LEGACY_ROOM_PREFIXES
 )
