@@ -25,14 +25,16 @@ SEARCH_TERMS: tuple[str, ...] = (
 def find_references(options: ToolOptions) -> int:
     """Print lines containing BTicino-related search terms.
 
-    Returns the number of matching lines found.
+    Returns the number of matching lines found, or ``-1`` when the storage
+    path does not exist so callers can tell a misconfigured ``--config`` apart
+    from a genuinely clean scan.
     """
     log = get_logger()
     storage = storage_path(options.config_path)
 
     if not storage.is_dir():
         log.warning("Storage path not found: %s", storage)
-        return 0
+        return -1
 
     matches = 0
 
@@ -65,12 +67,22 @@ def find_references(options: ToolOptions) -> int:
 
 
 def main() -> None:
-    """Run the reference finder."""
+    """Run the reference finder.
+
+    Exit codes: ``0`` when the storage was scanned and no references remain,
+    ``1`` when references were found, and ``2`` when the storage path is
+    missing (for example a misconfigured ``--config``), so the tool can be used
+    in scripts and CI to confirm a cleanup succeeded.
+    """
     parser = build_parser(
         "Find BTicino references in Home Assistant storage files",
         include_write_options=False,
     )
-    find_references(parse_options(parser))
+    matches = find_references(parse_options(parser))
+
+    if matches < 0:
+        sys.exit(2)
+    sys.exit(1 if matches > 0 else 0)
 
 
 if __name__ == "__main__":

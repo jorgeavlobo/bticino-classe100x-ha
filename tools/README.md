@@ -74,3 +74,14 @@ Preview first, then apply:
   without changing anything.
 - The tools validate that `--config` points to an existing directory and skip
   files that are missing or cannot be parsed instead of failing destructively.
+
+## Exit codes
+
+For scripting and CI the tools report their outcome via the process exit code:
+
+- Cleanup tools (including `clean_everything.py`) exit `0` on success (updated,
+  nothing to remove, dry run or a deliberate skip) and `1` if any file could not
+  be read, backed up or written.
+- `find_bticino_references.py` exits `0` when no references remain, `1` when
+  references were found, and `2` when the storage path is missing (for example a
+  misconfigured `--config`).
