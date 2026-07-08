@@ -13,7 +13,18 @@
           "command_timeout": "Tempo limite do comando",
           "release_delay": "Atraso de libertação"
         }
-      },
+      }
+    },
+    "error": {
+      "ssh_key_required": "O caminho da chave privada SSH é obrigatório.",
+      "ssh_key_not_found": "O ficheiro da chave privada SSH não foi encontrado.",
+      "password_auth_not_implemented": "A autenticação por palavra-passe ainda não está implementada.",
+      "cannot_connect": "Não foi possível ligar ao BTicino CLASSE100X por SSH.",
+      "openwebnet_no_response": "O SSH funciona, mas o OpenWebNet não devolveu uma resposta válida."
+    }
+  },
+  "options": {
+    "step": {
       "init": {
         "title": "Opções BTicino CLASSE100X",
         "description": "Atualizar e testar as definições de ligação do BTicino CLASSE100X.",
@@ -27,13 +38,6 @@
           "release_delay": "Atraso de libertação"
         }
       }
-    },
-    "error": {
-      "ssh_key_required": "O caminho da chave privada SSH é obrigatório.",
-      "ssh_key_not_found": "O ficheiro da chave privada SSH não foi encontrado.",
-      "password_auth_not_implemented": "A autenticação por palavra-passe ainda não está implementada.",
-      "cannot_connect": "Não foi possível ligar ao BTicino CLASSE100X por SSH.",
-      "openwebnet_no_response": "O SSH funciona, mas o OpenWebNet não devolveu uma resposta válida."
     }
   },
   "entity": {

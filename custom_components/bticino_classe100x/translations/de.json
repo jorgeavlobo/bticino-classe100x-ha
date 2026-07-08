@@ -13,7 +13,18 @@
           "command_timeout": "Befehls-Timeout",
           "release_delay": "Freigabeverzögerung"
         }
-      },
+      }
+    },
+    "error": {
+      "ssh_key_required": "Der Pfad zum privaten SSH-Schlüssel ist erforderlich.",
+      "ssh_key_not_found": "Die private SSH-Schlüsseldatei wurde nicht gefunden.",
+      "password_auth_not_implemented": "Die Passwort-Authentifizierung ist noch nicht implementiert.",
+      "cannot_connect": "Verbindung zum BTicino CLASSE100X über SSH nicht möglich.",
+      "openwebnet_no_response": "SSH funktioniert, aber OpenWebNet hat keine gültige Antwort zurückgegeben."
+    }
+  },
+  "options": {
+    "step": {
       "init": {
         "title": "BTicino CLASSE100X Optionen",
         "description": "Verbindungseinstellungen des BTicino CLASSE100X aktualisieren und testen.",
@@ -27,13 +38,6 @@
           "release_delay": "Freigabeverzögerung"
         }
       }
-    },
-    "error": {
-      "ssh_key_required": "Der Pfad zum privaten SSH-Schlüssel ist erforderlich.",
-      "ssh_key_not_found": "Die private SSH-Schlüsseldatei wurde nicht gefunden.",
-      "password_auth_not_implemented": "Die Passwort-Authentifizierung ist noch nicht implementiert.",
-      "cannot_connect": "Verbindung zum BTicino CLASSE100X über SSH nicht möglich.",
-      "openwebnet_no_response": "SSH funktioniert, aber OpenWebNet hat keine gültige Antwort zurückgegeben."
     }
   },
   "entity": {
