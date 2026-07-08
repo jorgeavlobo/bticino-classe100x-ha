@@ -12,7 +12,8 @@ This is the single source of truth for HACS detection, shared by both
 
 from __future__ import annotations
 
-from typing import Any
+import re
+from typing import Any, Iterable
 
 HACS_PLATFORM = "hacs"
 
@@ -35,3 +36,20 @@ HACS_ENTITY_IDS: frozenset[str] = frozenset(
 def is_hacs_platform(entity: Any) -> bool:
     """Return true when a registry entity's platform is HACS."""
     return isinstance(entity, dict) and entity.get("platform") == HACS_PLATFORM
+
+
+def strip_hacs_entity_ids(
+    text: str, entity_ids: Iterable[str] = HACS_ENTITY_IDS
+) -> str:
+    """Remove HACS entity ids from ``text``, matching whole entity ids only.
+
+    Each id is removed only where it is not part of a longer entity id — not
+    directly preceded or followed by an entity-id word character — so a suffixed
+    id such as ``update.bticino_classe100x_update_2`` (a genuine, non-HACS
+    entity Home Assistant may create) is left intact and still matches the
+    BTicino token afterwards. Used to neutralize HACS-only references before the
+    token text scan in both the cleanup matcher and the reference scanner.
+    """
+    for entity_id in entity_ids:
+        text = re.sub(rf"(?<!\w){re.escape(entity_id)}(?!\w)", "", text)
+    return text

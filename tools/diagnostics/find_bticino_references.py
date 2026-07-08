@@ -29,7 +29,7 @@ from diagnostics.shared.entities import (
     mentions_bticino,
 )
 from shared.cli import ToolOptions, build_parser, get_logger, parse_options
-from shared.hacs import HACS_ENTITY_IDS
+from shared.hacs import HACS_ENTITY_IDS, strip_hacs_entity_ids
 from shared.jsonfile import read_json
 from shared.matching import (
     LEGACY_ENTITY_IDS,
@@ -296,10 +296,10 @@ def find_references(options: ToolOptions) -> ScanResult:
             # any discovered in the registries are stripped, so a line that
             # references only a HACS entity is informational even when the HACS
             # entities are absent from (or their registry files unreadable in)
-            # this storage copy.
-            remainder = line
-            for hacs_id in HACS_ENTITY_IDS | hacs_entity_ids:
-                remainder = remainder.replace(hacs_id, "")
+            # this storage copy. Whole entity ids are stripped (never a bare
+            # prefix), so a suffixed real entity such as
+            # ``update.bticino_classe100x_update_2`` still counts as confirmed.
+            remainder = strip_hacs_entity_ids(line, HACS_ENTITY_IDS | hacs_entity_ids)
 
             if _line_references_bticino(remainder):
                 confirmed += 1

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from shared.hacs import HACS_ENTITY_IDS, is_hacs_platform
+from shared.hacs import HACS_ENTITY_IDS, is_hacs_platform, strip_hacs_entity_ids
 
 
 BTICINO_STRINGS: tuple[str, ...] = (
@@ -159,8 +159,6 @@ def contains_bticino_reference(value: Any) -> bool:
         if "platform" in value:
             return _registry_entry_references_bticino(value)
 
-    text = json.dumps(value, ensure_ascii=False)
-    for hacs_id in HACS_ENTITY_IDS:
-        text = text.replace(hacs_id, "")
+    text = strip_hacs_entity_ids(json.dumps(value, ensure_ascii=False))
 
     return any(item in text for item in BTICINO_STRINGS + LEGACY_ENTITY_IDS)

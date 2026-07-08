@@ -203,6 +203,12 @@ HACS_DATA = json.dumps(
         }
     }
 )
+# A dashboard referencing a real entity whose id merely starts with a HACS id
+# but is not exactly it (a suffixed ``..._update_2`` Home Assistant may create).
+# Stripping HACS ids as whole tokens must leave this intact, so it is confirmed.
+SUFFIXED_DASHBOARD = json.dumps(
+    {"cards": [{"entity": f"update.{DOMAIN}_update_2"}]}
+)
 
 
 def _write_fixture(base: Path) -> None:
@@ -216,6 +222,7 @@ def _write_fixture(base: Path) -> None:
     (storage / "lovelace.legacy").write_text(LEGACY_DASHBOARD, "utf-8")
     (storage / "lovelace.mixed").write_text(MIXED_DASHBOARD, "utf-8")
     (storage / "hacs.data").write_text(HACS_DATA, "utf-8")
+    (storage / "lovelace.suffixed").write_text(SUFFIXED_DASHBOARD, "utf-8")
 
 
 def _scan() -> tuple[object, str]:
@@ -347,6 +354,21 @@ def main() -> int:
     checks.append(
         ("HACS-only HomeKit bridge is not confirmed", "hk_hacs_only" not in output)
     )
+    # A dashboard referencing a real entity whose id only starts with a HACS id
+    # (suffixed ``..._update_2``) must be confirmed: HACS ids are stripped as
+    # whole tokens, so the suffixed id is not neutralized.
+    suffixed_lines = [
+        line
+        for line in output.splitlines()
+        if f"update.{DOMAIN}_update_2" in line
+    ]
+    checks.append(
+        (
+            "suffixed real entity in dashboard is confirmed",
+            bool(suffixed_lines)
+            and all(not line.startswith("[HACS]") for line in suffixed_lines),
+        )
+    )
     checks.append(
         ("legacy dashboard reference is detected", "button.condominium_gate" in output)
     )
@@ -436,6 +458,19 @@ def main() -> int:
         (
             "cleaner ignores HACS-only HomeKit bridge",
             not contains_bticino_reference(hacs_only_homekit),
+        )
+    )
+    # A HomeKit bridge exposing a real entity whose id only starts with a HACS
+    # id (suffixed ``..._update_2``) must still be matched by the cleaner.
+    suffixed_homekit = {
+        "entry_id": "hk_suffixed",
+        "domain": "homekit",
+        "data": {"entities": [f"update.{DOMAIN}_update_2"]},
+    }
+    checks.append(
+        (
+            "cleaner matches HomeKit bridge with suffixed real entity",
+            contains_bticino_reference(suffixed_homekit),
         )
     )
     checks.append(("cleaner ignores HACS entity", not contains_bticino_reference(hacs_entity)))
