@@ -54,9 +54,9 @@ bundle is stale, not missing.
 Run the validator from the repository root:
 
 ```console
-python3 scripts/validate_translations.py
+python3 tools/translations/validate_translations.py
 ```
 
-It flattens each language file the same way Home Assistant does and confirms
-every language exposes exactly the keys declared in `translations/en.json`. A
-`0` exit code means the translations are complete and consistent.
+It compares every language file against `translations/en.json` and confirms each
+exposes exactly the same keys, structure and placeholders. A `0` exit code means
+the translations are complete and consistent.
