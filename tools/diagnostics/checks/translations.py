@@ -43,7 +43,17 @@ class TranslationsCheck(HealthCheck):
                 errors.append(f"Missing translation file: {filename}")
                 continue
 
-            loaded[filename] = read_json_file(path)
+            data = read_json_file(path)
+            if not isinstance(data, dict):
+                # A non-object root (e.g. a JSON array) would otherwise flatten
+                # to zero keys and silently pass, so fail it explicitly.
+                errors.append(
+                    f"{filename} must contain a JSON object, got "
+                    f"{type(data).__name__}"
+                )
+                continue
+
+            loaded[filename] = data
             details.append(f"Found translation file: {filename}")
 
         if CANONICAL_LOCALE in loaded:

@@ -16,9 +16,11 @@ provides the matching labels under
 Assistant's translation loader reads at runtime.
 
 CI does not exercise the Home Assistant runtime; instead
-[`scripts/validate_translations.py`](../scripts/validate_translations.py) checks
-translation *completeness* — that every language file exposes exactly the same
-keys as `translations/en.json` — so no language can silently omit a state slug.
+[`tools/translations/validate_translations.py`](../tools/translations/validate_translations.py)
+checks translation *consistency* — that every language file exposes exactly the
+same keys, structure and placeholders as `translations/en.json` — so no language
+can silently omit a state slug. See [Translations.md](Translations.md) for the
+full policy.
 
 Two things can make the correct labels *appear* untranslated in the UI:
 
