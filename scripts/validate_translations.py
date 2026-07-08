@@ -24,7 +24,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 
 from shared.translations import flatten_keys, placeholders
-from translations.validate_translations import _compare, _order_notes
+from translations.validate_translations import (
+    _canonical_issues,
+    _compare,
+    _order_notes,
+)
 
 REFERENCE = {
     "config": {"title": "BTicino", "note": "Connect to {host}"},
@@ -99,6 +103,19 @@ def main() -> int:
             _has(
                 _compare({"a": 123}, {"a": "translated"}),
                 "invalid reference value at a: en.json must use string values, got int",
+            ),
+        )
+    )
+
+    # The canonical self-check validates en.json's own leaf types (fail fast),
+    # independent of any locale comparison.
+    checks.append(("valid canonical has no issues", _canonical_issues(REFERENCE) == []))
+    checks.append(
+        (
+            "canonical non-string leaf detected",
+            _has(
+                _canonical_issues({"entity": {"sensor": {"health": {"name": None}}}}),
+                "non-string value at entity.sensor.health.name: got NoneType",
             ),
         )
     )

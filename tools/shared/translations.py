@@ -1,7 +1,8 @@
 """Shared translation constants and helpers.
 
-English (``translations/en.json``) is the authoritative source for the BTicino
-integration; every other locale must expose exactly the same structure. This is
+English (``custom_components/bticino_classe100x/translations/en.json``) is the
+authoritative source for the BTicino integration; every other locale must expose
+exactly the same structure. This is
 the single source of truth for the set of locales the integration ships and for
 flattening/parsing translation JSON, shared by both the standalone validator
 (``tools/translations/validate_translations.py``) and the diagnostics health

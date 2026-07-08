@@ -10,15 +10,15 @@ the integration ships the translations.
 **This is not an integration bug.** The integration exposes each enum state as a
 lowercase slug (`healthy`, `slow`, `offline`, `success`, `failed`, `never`) and
 provides the matching labels under
-`entity.sensor.<key>.state.<slug>` in every language file
-(`translations/en.json`, `translations/pt.json`, `translations/fr.json`,
-`translations/de.json`, `translations/it.json`), which is the structure Home
-Assistant's translation loader reads at runtime.
+`entity.sensor.<key>.state.<slug>` in every language file under
+`custom_components/bticino_classe100x/translations/` (`en.json`, `pt.json`,
+`fr.json`, `de.json`, `it.json`), which is the structure Home Assistant's
+translation loader reads at runtime.
 
 CI does not exercise the Home Assistant runtime; instead
 [`tools/translations/validate_translations.py`](../tools/translations/validate_translations.py)
 checks translation *consistency* — that every language file exposes exactly the
-same keys, structure and placeholders as `translations/en.json` — so no language
+same keys, structure and placeholders as the canonical `en.json` — so no language
 can silently omit a state slug. See [Translations.md](Translations.md) for the
 full policy.
 
@@ -57,6 +57,7 @@ Run the validator from the repository root:
 python3 tools/translations/validate_translations.py
 ```
 
-It compares every language file against `translations/en.json` and confirms each
-exposes exactly the same keys, structure and placeholders. A `0` exit code means
-the translations are complete and consistent.
+It compares every language file under
+`custom_components/bticino_classe100x/translations/` against the canonical
+`en.json` and confirms each exposes exactly the same keys, structure and
+placeholders. A `0` exit code means the translations are complete and consistent.

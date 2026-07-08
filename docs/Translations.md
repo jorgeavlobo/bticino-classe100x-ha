@@ -50,7 +50,10 @@ Both run automatically in the **Translations** GitHub Actions workflow.
 
 ## Adding a new language
 
-1. Copy `translations/en.json` to `translations/<language>.json`.
+All translation files live under `custom_components/bticino_classe100x/translations/`.
+
+1. Copy `custom_components/bticino_classe100x/translations/en.json` to
+   `custom_components/bticino_classe100x/translations/<language>.json`.
 2. Translate only the *values*. Never add, remove or rename keys.
 3. Preserve every `{placeholder}` token exactly.
 4. Keep the JSON hierarchy and (ideally) the key order identical to `en.json`.
