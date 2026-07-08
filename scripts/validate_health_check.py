@@ -190,6 +190,20 @@ def _valid_rename_with_room(registry: dict[str, Any]) -> None:
             entity["entity_id"] = f"button.my_entrance_hall_{DOMAIN}_condominium_gate"
 
 
+def _foreign_platform(registry: dict[str, Any]) -> None:
+    # An entity that reuses the BTicino unique-id prefix but was created by a
+    # different integration (platform) must be flagged, not accepted.
+    registry["data"]["entities"].append(
+        {
+            "entity_id": f"sensor.{DOMAIN}_foreign",
+            "unique_id": _unique_id("foreign_metric"),
+            "platform": "mqtt",
+            "config_entry_id": ENTRY_ID,
+            "orphaned_timestamp": None,
+        }
+    )
+
+
 def _metadata_mismatch(registry: dict[str, Any]) -> None:
     for entity in registry["data"]["entities"]:
         if entity["unique_id"].endswith("_health_status"):
@@ -268,6 +282,14 @@ SCENARIOS: tuple[
         "FAIL",
         "PASS",
         "missing a unique_id",
+        None,
+    ),
+    (
+        "foreign platform",
+        _foreign_platform,
+        "FAIL",
+        "PASS",
+        "non-BTicino platform",
         None,
     ),
     (

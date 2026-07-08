@@ -31,7 +31,7 @@ class ExpectedEntity:
     legacy ``connection`` suffix while its key is ``connection_status``.
     """
 
-    platform: str
+    domain: str
     key: str
     unique_key: str
     entity_category: str | None = None
@@ -58,7 +58,7 @@ class ExpectedEntity:
     @property
     def default_entity_id(self) -> str:
         """Return the default entity id using the default object id."""
-        return f"{self.platform}.{self.default_object_id}"
+        return f"{self.domain}.{self.default_object_id}"
 
     def unique_id(self, host: str) -> str:
         """Return the full expected unique id for a given host."""
@@ -70,19 +70,19 @@ class ExpectedEntity:
 EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
     # Buttons
     ExpectedEntity(
-        platform="button",
+        domain="button",
         key="condominium_gate",
         unique_key="condominium_gate",
         original_icon="mdi:gate",
     ),
     ExpectedEntity(
-        platform="button",
+        domain="button",
         key="pedestrian_door",
         unique_key="pedestrian_door",
         original_icon="mdi:door",
     ),
     ExpectedEntity(
-        platform="button",
+        domain="button",
         key="test_ssh_connection",
         unique_key="test_ssh_connection",
         entity_category="diagnostic",
@@ -90,7 +90,7 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
     ),
     # Binary sensors
     ExpectedEntity(
-        platform="binary_sensor",
+        domain="binary_sensor",
         key="connection_status",
         unique_key="connection",
         entity_category="diagnostic",
@@ -100,7 +100,7 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
     ),
     # Sensors
     ExpectedEntity(
-        platform="sensor",
+        domain="sensor",
         key="health_status",
         unique_key="health_status",
         entity_category=None,
@@ -109,7 +109,7 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
         options=("healthy", "slow", "offline"),
     ),
     ExpectedEntity(
-        platform="sensor",
+        domain="sensor",
         key="ssh_latency",
         unique_key="ssh_latency",
         entity_category="diagnostic",
@@ -119,7 +119,7 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
         state_class="measurement",
     ),
     ExpectedEntity(
-        platform="sensor",
+        domain="sensor",
         key="openwebnet_latency",
         unique_key="openwebnet_latency",
         entity_category="diagnostic",
@@ -129,7 +129,7 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
         state_class="measurement",
     ),
     ExpectedEntity(
-        platform="sensor",
+        domain="sensor",
         key="firmware_version",
         unique_key="firmware_version",
         entity_category="diagnostic",
@@ -137,7 +137,7 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
         entity_registry_enabled_default=False,
     ),
     ExpectedEntity(
-        platform="sensor",
+        domain="sensor",
         key="os_release",
         unique_key="os_release",
         entity_category="diagnostic",
@@ -145,7 +145,7 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
         entity_registry_enabled_default=False,
     ),
     ExpectedEntity(
-        platform="sensor",
+        domain="sensor",
         key="uptime",
         unique_key="uptime",
         entity_category="diagnostic",
@@ -153,7 +153,7 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
         entity_registry_enabled_default=False,
     ),
     ExpectedEntity(
-        platform="sensor",
+        domain="sensor",
         key="hostname",
         unique_key="hostname",
         entity_category="diagnostic",
@@ -161,7 +161,7 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
         entity_registry_enabled_default=False,
     ),
     ExpectedEntity(
-        platform="sensor",
+        domain="sensor",
         key="mac_address",
         unique_key="mac_address",
         entity_category="diagnostic",
@@ -169,7 +169,7 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
         entity_registry_enabled_default=False,
     ),
     ExpectedEntity(
-        platform="sensor",
+        domain="sensor",
         key="last_test_result",
         unique_key="last_test_result",
         entity_category="diagnostic",
@@ -178,7 +178,7 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
         options=("success", "failed"),
     ),
     ExpectedEntity(
-        platform="sensor",
+        domain="sensor",
         key="last_successful_test",
         unique_key="last_successful_test",
         entity_category="diagnostic",
@@ -186,7 +186,7 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
         original_icon="mdi:check-circle-outline",
     ),
     ExpectedEntity(
-        platform="sensor",
+        domain="sensor",
         key="last_failed_test_status",
         unique_key="last_failed_test_status",
         entity_category="diagnostic",
@@ -195,7 +195,7 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
         options=("never", "failed"),
     ),
     ExpectedEntity(
-        platform="sensor",
+        domain="sensor",
         key="last_failed_test",
         unique_key="last_failed_test",
         entity_category="diagnostic",

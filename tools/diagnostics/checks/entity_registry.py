@@ -238,22 +238,25 @@ def _check_expected_versus_actual(
     errors: list[str] = []
 
     expected_by_key = {
-        (entity.platform, entity.unique_id(host)): entity
+        (entity.domain, entity.unique_id(host)): entity
         for entity in EXPECTED_ENTITIES
     }
     deprecated_by_key: dict[tuple[str, str], Any] = {}
     expected_domains_by_unique_id: dict[str, set[str]] = {}
     for entity in EXPECTED_ENTITIES:
         expected_domains_by_unique_id.setdefault(entity.unique_id(host), set()).add(
-            entity.platform
+            entity.domain
         )
         for old_key in entity.deprecated_unique_keys:
-            deprecated_by_key[(entity.platform, f"{DOMAIN}_{host}_{old_key}")] = entity
+            deprecated_by_key[(entity.domain, f"{DOMAIN}_{host}_{old_key}")] = entity
 
+    # Only entities created by the BTicino integration (platform == DOMAIN) count
+    # as "present"; an entity that merely reuses the unique-id prefix under a
+    # different platform must not satisfy an expected entity.
     present_keys = {
         (_entity_domain(entity), entity["unique_id"])
         for entity in entities
-        if entity.get("unique_id")
+        if entity.get("unique_id") and entity.get("platform") == DOMAIN
     }
 
     # Missing expected entities.
@@ -290,6 +293,20 @@ def _check_expected_versus_actual(
                     entity,
                     reason="BTicino entity is missing a unique_id.",
                     action="Remove the entity if it is a leftover from a past version.",
+                )
+            )
+            continue
+
+        platform = entity.get("platform")
+        if platform != DOMAIN:
+            errors.append(
+                _format_obsolete(
+                    entity,
+                    reason=(
+                        f"Entity carries a BTicino unique_id but a non-BTicino "
+                        f"platform ({platform!r})."
+                    ),
+                    action="Remove the entity if it is a leftover or misattributed.",
                 )
             )
             continue
