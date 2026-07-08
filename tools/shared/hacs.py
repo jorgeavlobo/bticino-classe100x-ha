@@ -16,10 +16,16 @@ from typing import Any
 
 HACS_PLATFORM = "hacs"
 
-# HACS management entities created for the BTicino integration.
+# The exact entity ids HACS creates for the BTicino integration. Used as a
+# ``startswith`` fallback in ``matching.is_hacs_managed`` for restore-state
+# entries, which do not carry a ``platform`` field. The full object-id suffix
+# (``_update`` / ``_pre_release``) is kept so a genuine BTicino ``update``/
+# ``switch`` entity following the ``bticino_classe100x_<key>`` convention (for
+# example a future ``switch.bticino_classe100x_intercom_mute``) is never
+# misclassified as HACS-managed.
 HACS_ENTITY_ID_PREFIXES: tuple[str, ...] = (
-    "update.bticino_classe100x",
-    "switch.bticino_classe100x",
+    "update.bticino_classe100x_update",
+    "switch.bticino_classe100x_pre_release",
 )
 
 

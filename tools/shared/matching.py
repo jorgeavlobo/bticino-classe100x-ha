@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from shared.hacs import HACS_ENTITY_ID_PREFIXES, HACS_PLATFORM
+from shared.hacs import HACS_ENTITY_ID_PREFIXES, is_hacs_platform
 
 
 BTICINO_STRINGS: tuple[str, ...] = (
@@ -23,8 +23,11 @@ LEGACY_ENTITY_IDS: tuple[str, ...] = (
     "automation.pedestrian_door_opening",
 )
 
+# The integration domain, also the entity platform of current BTicino entities.
+BTICINO_PLATFORM = "bticino_classe100x"
+
 # The object-id prefix of a current BTicino entity (``<domain>.<prefix><key>``).
-BTICINO_OBJECT_ID_PREFIX = "bticino_classe100x_"
+BTICINO_OBJECT_ID_PREFIX = f"{BTICINO_PLATFORM}_"
 
 # Room prefixes used by an earlier naming strategy that produced object ids like
 # ``<room>_bticino_classe100x_<key>`` before the entities adopted
@@ -97,10 +100,32 @@ def is_hacs_managed(value: Any) -> bool:
     fallback for restore-state entries, which do not carry the platform.
     """
     if isinstance(value, dict) and "platform" in value:
-        return value.get("platform") == HACS_PLATFORM
+        return is_hacs_platform(value)
 
     entity_id = _entity_id_of(value)
     return entity_id is not None and entity_id.startswith(HACS_ENTITY_ID_PREFIXES)
+
+
+def _registry_entry_references_bticino(entry: dict[str, Any]) -> bool:
+    """Return true if an entity-registry entry belongs to BTicino.
+
+    Matched structurally on its identifiers — the entity_id (current or legacy
+    forms), the unique_id prefix, or the entity platform — never by a bare
+    substring, so an unrelated entity that merely embeds the integration name in
+    its object id (for example ``sensor.my_bticino_classe100x`` on another
+    platform) is not matched.
+    """
+    if is_bticino_entity_id(entry.get("entity_id")):
+        return True
+
+    unique_id = entry.get("unique_id")
+    if isinstance(unique_id, str) and unique_id.startswith(BTICINO_OBJECT_ID_PREFIX):
+        return True
+
+    platform = entry.get("platform")
+    return isinstance(platform, str) and (
+        platform == BTICINO_PLATFORM or platform.startswith(BTICINO_OBJECT_ID_PREFIX)
+    )
 
 
 def contains_bticino_reference(value: Any) -> bool:
@@ -109,16 +134,28 @@ def contains_bticino_reference(value: Any) -> bool:
     HACS-managed entities are never matched even though their ids embed the
     integration name, so the cleanup tools never remove them.
 
-    Restore-state records (a dict carrying a nested ``state`` dict) are matched
-    structurally on the entity_id they carry, never on their free-form state
-    text: an unrelated entity whose state happens to equal a legacy id (e.g. a
-    text/history sensor mirroring another entity) must not be removed.
+    The known registry shapes are matched structurally, never by a bare
+    substring, so an unrelated entity that merely embeds the integration name in
+    a free-form field is not removed:
+
+    - restore-state records (a dict carrying a nested ``state`` dict) match only
+      on the carried ``entity_id`` — never the free-form state text, so a
+      text/history sensor whose state equals a legacy id is not removed;
+    - entity-registry entries (a dict carrying a ``platform``) match on their
+      identifiers — the entity_id, unique_id prefix or platform.
+
+    Any other shape (config entries, HomeKit bridges, dashboards) falls back to
+    the token/legacy-id text scan.
     """
     if is_hacs_managed(value):
         return False
 
-    if isinstance(value, dict) and isinstance(value.get("state"), dict):
-        return is_bticino_entity_id(value["state"].get("entity_id"))
+    if isinstance(value, dict):
+        state = value.get("state")
+        if isinstance(state, dict):
+            return is_bticino_entity_id(state.get("entity_id"))
+        if "platform" in value:
+            return _registry_entry_references_bticino(value)
 
     text = json.dumps(value, ensure_ascii=False)
 

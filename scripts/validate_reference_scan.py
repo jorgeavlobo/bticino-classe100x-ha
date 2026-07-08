@@ -90,6 +90,17 @@ ENTITY_REGISTRY = {
                 "platform": "removed_buttons_platform",
                 "config_entry_id": "gone",
             },
+            # An unrelated entity from another integration whose object id merely
+            # embeds the integration name as a substring (not the
+            # ``bticino_classe100x_`` object-id prefix, and on a foreign
+            # platform): structural matching must not flag it, so the cleaner
+            # keeps it and the scan does not report it.
+            {
+                "entity_id": "sensor.foreign_bticino_classe100x_note",
+                "unique_id": "foreign_note",
+                "platform": "other_intercom",
+                "config_entry_id": "oth1",
+            },
         ],
         "deleted_entities": [],
     }
@@ -323,6 +334,14 @@ def main() -> int:
             "entrance_hall_bticino_classe100x_condominium_gate" in output,
         )
     )
+    # A registry entity on a foreign platform whose object id only embeds the
+    # integration name as a substring must not be reported (structural match).
+    checks.append(
+        (
+            "no registry object-id-substring false positive",
+            "sensor.foreign_bticino_classe100x_note" not in output,
+        )
+    )
     # HACS bookkeeping files are informational: their lines must be labelled
     # [HACS] and never counted as confirmed references.
     hacs_data_lines = [
@@ -354,12 +373,19 @@ def main() -> int:
     video_restore = RESTORE_STATE["data"][2]
 
     legacy_entity = ENTITY_REGISTRY["data"]["entities"][4]
+    foreign_entity = ENTITY_REGISTRY["data"]["entities"][5]
     legacy_id_in_state = RESTORE_STATE["data"][4]
     substring_restore = RESTORE_STATE["data"][5]
     room_prefixed_restore = RESTORE_STATE["data"][6]
 
     checks.append(("cleaner matches BTicino entity", contains_bticino_reference(bticino_entity)))
     checks.append(("cleaner matches legacy registry entry", contains_bticino_reference(legacy_entity)))
+    checks.append(
+        (
+            "cleaner ignores foreign object-id-substring entity",
+            not contains_bticino_reference(foreign_entity),
+        )
+    )
     checks.append(("cleaner ignores HACS entity", not contains_bticino_reference(hacs_entity)))
     checks.append(("cleaner ignores HACS restore state", not contains_bticino_reference(hacs_restore)))
     checks.append(("cleaner ignores unrelated entity", not contains_bticino_reference(video_restore)))
