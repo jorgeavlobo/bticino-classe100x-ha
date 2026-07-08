@@ -20,6 +20,7 @@ from typing import Any
 from diagnostics.checks.expected_entities import EXPECTED_ENTITIES, ExpectedEntity
 from diagnostics.shared.check import HealthCheck
 from diagnostics.shared.entities import (
+    DOMAIN,
     bticino_config_entry_ids,
     bticino_host,
     find_bticino_entities,
@@ -85,10 +86,14 @@ class MetadataConsistencyCheck(HealthCheck):
             )
 
         entities = registry.get("data", {}).get("entities", [])
+        # Only compare entities created by the BTicino integration; an entity
+        # that merely reuses the unique-id prefix under a different platform is
+        # reported by the entity registry check, not compared here (this mirrors
+        # the platform guard in that check so the two never disagree).
         by_unique_id = {
             entity.get("unique_id"): entity
             for entity in find_bticino_entities(entities, config_entry_ids)
-            if entity.get("unique_id")
+            if entity.get("unique_id") and entity.get("platform") == DOMAIN
         }
 
         warnings: list[str] = []

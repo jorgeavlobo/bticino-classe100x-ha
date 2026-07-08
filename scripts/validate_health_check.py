@@ -204,6 +204,17 @@ def _foreign_platform(registry: dict[str, Any]) -> None:
     )
 
 
+def _foreign_platform_expected_key(registry: dict[str, Any]) -> None:
+    # A foreign-platform entity reusing a *real* expected unique key. The entity
+    # registry check must flag it (and report the real one missing), and the
+    # metadata check must not compare it — even though its metadata is wrong, it
+    # is excluded, so no metadata warning is produced.
+    for entity in registry["data"]["entities"]:
+        if entity["unique_id"] == _unique_id("health_status"):
+            entity["platform"] = "mqtt"
+            entity["entity_category"] = "diagnostic"
+
+
 def _metadata_mismatch(registry: dict[str, Any]) -> None:
     for entity in registry["data"]["entities"]:
         if entity["unique_id"].endswith("_health_status"):
@@ -287,6 +298,14 @@ SCENARIOS: tuple[
     (
         "foreign platform",
         _foreign_platform,
+        "FAIL",
+        "PASS",
+        "non-BTicino platform",
+        None,
+    ),
+    (
+        "foreign platform reusing expected key",
+        _foreign_platform_expected_key,
         "FAIL",
         "PASS",
         "non-BTicino platform",
