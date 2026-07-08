@@ -2,11 +2,12 @@
 
 English (``custom_components/bticino_classe100x/translations/en.json``) is the
 authoritative source for the BTicino integration; every other locale must expose
-exactly the same structure. This is
-the single source of truth for the set of locales the integration ships and for
-flattening/parsing translation JSON, shared by both the standalone validator
-(``tools/translations/validate_translations.py``) and the diagnostics health
-check (``tools/diagnostics/checks/translations.py``) so the two never drift.
+exactly the same structure. This is the single source of truth for the set of
+locales the integration ships and for the comparison logic (flattening, key/
+placeholder/type diffing), shared by the standalone validator
+(``tools/translations/validate_translations.py``), its self-test
+(``scripts/validate_translations.py``) and the diagnostics health check
+(``tools/diagnostics/checks/translations.py``) so they never drift.
 """
 
 from __future__ import annotations
@@ -55,3 +56,104 @@ def placeholders(text: Any) -> set[str]:
     if not isinstance(text, str):
         return set()
     return set(_PLACEHOLDER.findall(text))
+
+
+def canonical_issues(data: dict, path: str = "") -> list[str]:
+    """Return type problems in the canonical file itself.
+
+    Every leaf must be a string. A non-string leaf in the canonical source would
+    otherwise be silently accepted (``placeholders()`` ignores non-strings), so
+    it is validated up front rather than relying on a locale comparison.
+    """
+    issues: list[str] = []
+    for key, value in data.items():
+        key_path = f"{path}.{key}" if path else key
+        if isinstance(value, dict):
+            issues.extend(canonical_issues(value, key_path))
+        elif not isinstance(value, str):
+            issues.append(
+                f"non-string value at {key_path}: got {type(value).__name__}"
+            )
+    return issues
+
+
+def compare(reference: dict, candidate: dict, path: str = "") -> list[str]:
+    """Return the structural differences of candidate against reference.
+
+    Detects missing keys, unexpected keys, type mismatches (object vs leaf, or a
+    non-string leaf) and placeholder mismatches on string leaves.
+    """
+    issues: list[str] = []
+
+    for key, ref_value in reference.items():
+        key_path = f"{path}.{key}" if path else key
+
+        if key not in candidate:
+            issues.append(f"missing key: {key_path}")
+            continue
+
+        cand_value = candidate[key]
+        ref_is_obj = isinstance(ref_value, dict)
+        cand_is_obj = isinstance(cand_value, dict)
+
+        if ref_is_obj and cand_is_obj:
+            issues.extend(compare(ref_value, cand_value, key_path))
+        elif ref_is_obj != cand_is_obj:
+            expected = "object" if ref_is_obj else "string"
+            actual = "object" if cand_is_obj else type(cand_value).__name__
+            issues.append(
+                f"type mismatch at {key_path}: expected {expected}, got {actual}"
+            )
+        elif not isinstance(ref_value, str):
+            # The canonical leaf itself is not a string (e.g. a value committed
+            # as a number or null). Flag the source, since placeholders() ignores
+            # non-strings and would otherwise pass.
+            issues.append(
+                f"invalid reference value at {key_path}: en.json must use "
+                f"string values, got {type(ref_value).__name__}"
+            )
+        elif not isinstance(cand_value, str):
+            # A translation value must be a string; a locale that turned a string
+            # into null/true/123 would otherwise only be placeholder-checked (and
+            # pass) since placeholders() ignores non-strings.
+            issues.append(
+                f"type mismatch at {key_path}: expected string, got "
+                f"{type(cand_value).__name__}"
+            )
+        else:
+            missing_ph = placeholders(ref_value) - placeholders(cand_value)
+            extra_ph = placeholders(cand_value) - placeholders(ref_value)
+            if missing_ph:
+                issues.append(
+                    f"missing placeholder(s) {sorted(missing_ph)} at {key_path}"
+                )
+            if extra_ph:
+                issues.append(
+                    f"unexpected placeholder(s) {sorted(extra_ph)} at {key_path}"
+                )
+
+    for key in candidate:
+        if key not in reference:
+            key_path = f"{path}.{key}" if path else key
+            issues.append(f"unexpected key: {key_path}")
+
+    return issues
+
+
+def order_notes(reference: Any, candidate: Any, path: str = "") -> list[str]:
+    """Return informational notes where shared keys are in a different order."""
+    notes: list[str] = []
+    if not (isinstance(reference, dict) and isinstance(candidate, dict)):
+        return notes
+
+    ref_order = [key for key in reference if key in candidate]
+    cand_order = [key for key in candidate if key in reference]
+    if ref_order != cand_order:
+        notes.append(f"key order differs at {path or '(root)'}")
+
+    for key in reference:
+        if key in candidate:
+            key_path = f"{path}.{key}" if path else key
+            notes.extend(order_notes(reference[key], candidate[key], key_path))
+
+    return notes

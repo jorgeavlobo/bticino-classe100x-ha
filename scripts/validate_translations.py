@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Self-test for the BTicino translation validator.
+"""Self-test for the BTicino translation comparison logic.
 
-Exercises the structural comparison in
-``tools/translations/validate_translations.py`` against synthetic fixtures,
-asserting it detects each class of drift the validator promises to catch:
-missing keys, unexpected keys, type mismatches, placeholder mismatches, and
-(informational) key-order differences.
+Exercises the public comparison helpers in ``tools/shared/translations.py``
+(``compare``, ``order_notes``, ``canonical_issues``) — the same ones the CLI
+validator uses — against synthetic fixtures, asserting they detect each class of
+drift the validator promises to catch: missing keys, unexpected keys, type
+mismatches, placeholder mismatches, and (informational) key-order differences.
 
 It does not import Home Assistant, so it runs anywhere:
 
@@ -23,11 +23,12 @@ import sys
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 
-from shared.translations import flatten_keys, placeholders
-from translations.validate_translations import (
-    _canonical_issues,
-    _compare,
-    _order_notes,
+from shared.translations import (
+    canonical_issues,
+    compare,
+    flatten_keys,
+    order_notes,
+    placeholders,
 )
 
 REFERENCE = {
@@ -50,15 +51,15 @@ def main() -> int:
         "config": {"title": "BTicino", "note": "Connect to {host}"},
         "entity": {"sensor": {"health": {"name": "Health"}}},
     }
-    checks.append(("identical locale has no issues", _compare(REFERENCE, identical) == []))
-    checks.append(("identical locale has no order notes", _order_notes(REFERENCE, identical) == []))
+    checks.append(("identical locale has no issues", compare(REFERENCE, identical) == []))
+    checks.append(("identical locale has no order notes", order_notes(REFERENCE, identical) == []))
 
     # A missing leaf key is reported with its dotted path.
     missing = {
         "config": {"title": "BTicino", "note": "Verbinden mit {host}"},
         "entity": {"sensor": {"health": {}}},
     }
-    missing_issues = _compare(REFERENCE, missing)
+    missing_issues = compare(REFERENCE, missing)
     checks.append(("missing key detected", _has(missing_issues, "missing key: entity.sensor.health.name")))
 
     # An unexpected key present only in the candidate is reported.
@@ -67,7 +68,7 @@ def main() -> int:
         "entity": {"sensor": {"health": {"name": "Health"}}},
     }
     checks.append(
-        ("unexpected key detected", _has(_compare(REFERENCE, unexpected), "unexpected key: config.extra"))
+        ("unexpected key detected", _has(compare(REFERENCE, unexpected), "unexpected key: config.extra"))
     )
 
     # A leaf that becomes an object (or vice versa) is a type mismatch.
@@ -76,7 +77,7 @@ def main() -> int:
         "entity": {"sensor": {"health": {"name": "Health"}}},
     }
     checks.append(
-        ("type mismatch detected", _has(_compare(REFERENCE, type_mismatch), "type mismatch at config"))
+        ("type mismatch detected", _has(compare(REFERENCE, type_mismatch), "type mismatch at config"))
     )
 
     # When an object is expected but the candidate is a non-string leaf (list,
@@ -84,7 +85,7 @@ def main() -> int:
     checks.append(
         (
             "object-vs-list mismatch reports real type",
-            _has(_compare({"a": {"b": "x"}}, {"a": [1, 2]}), "type mismatch at a: expected object, got list"),
+            _has(compare({"a": {"b": "x"}}, {"a": [1, 2]}), "type mismatch at a: expected object, got list"),
         )
     )
 
@@ -98,7 +99,7 @@ def main() -> int:
         (
             "non-string leaf detected",
             _has(
-                _compare(REFERENCE, non_string_leaf),
+                compare(REFERENCE, non_string_leaf),
                 "type mismatch at entity.sensor.health.name: expected string, got int",
             ),
         )
@@ -110,7 +111,7 @@ def main() -> int:
         (
             "non-string reference leaf detected",
             _has(
-                _compare({"a": 123}, {"a": "translated"}),
+                compare({"a": 123}, {"a": "translated"}),
                 "invalid reference value at a: en.json must use string values, got int",
             ),
         )
@@ -118,12 +119,12 @@ def main() -> int:
 
     # The canonical self-check validates en.json's own leaf types (fail fast),
     # independent of any locale comparison.
-    checks.append(("valid canonical has no issues", _canonical_issues(REFERENCE) == []))
+    checks.append(("valid canonical has no issues", canonical_issues(REFERENCE) == []))
     checks.append(
         (
             "canonical non-string leaf detected",
             _has(
-                _canonical_issues({"entity": {"sensor": {"health": {"name": None}}}}),
+                canonical_issues({"entity": {"sensor": {"health": {"name": None}}}}),
                 "non-string value at entity.sensor.health.name: got NoneType",
             ),
         )
@@ -137,7 +138,7 @@ def main() -> int:
     checks.append(
         (
             "missing placeholder detected",
-            _has(_compare(REFERENCE, dropped_placeholder), "missing placeholder(s) ['{host}'] at config.note"),
+            _has(compare(REFERENCE, dropped_placeholder), "missing placeholder(s) ['{host}'] at config.note"),
         )
     )
 
@@ -149,7 +150,7 @@ def main() -> int:
     checks.append(
         (
             "unexpected placeholder detected",
-            _has(_compare(REFERENCE, added_placeholder), "unexpected placeholder(s) ['{brand}'] at config.title"),
+            _has(compare(REFERENCE, added_placeholder), "unexpected placeholder(s) ['{brand}'] at config.title"),
         )
     )
 
@@ -159,8 +160,8 @@ def main() -> int:
         "entity": {"sensor": {"health": {"name": "Health"}}},
         "config": {"note": "Connect to {host}", "title": "BTicino"},
     }
-    checks.append(("reordered locale has no issues", _compare(REFERENCE, reordered) == []))
-    checks.append(("reordered locale is noted", bool(_order_notes(REFERENCE, reordered))))
+    checks.append(("reordered locale has no issues", compare(REFERENCE, reordered) == []))
+    checks.append(("reordered locale is noted", bool(order_notes(REFERENCE, reordered))))
 
     # The shared helpers behave as the validator relies on.
     checks.append(("placeholders extracts tokens", placeholders("a {x} b {y}") == {"{x}", "{y}"}))

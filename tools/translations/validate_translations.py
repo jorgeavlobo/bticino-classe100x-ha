@@ -35,7 +35,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from shared.translations import (  # noqa: E402  (path set up above)
     CANONICAL_LOCALE,
     REQUIRED_LOCALES,
-    placeholders,
+    canonical_issues,
+    compare,
+    order_notes,
 )
 
 # The repo-relative directory holding the translation files, used for display so
@@ -58,108 +60,6 @@ def _load(path: Path) -> dict[str, Any] | None:
     return data
 
 
-def _compare(reference: dict, candidate: dict, path: str = "") -> list[str]:
-    """Return the structural differences of candidate against reference.
-
-    Detects missing keys, unexpected keys, type mismatches (object vs string)
-    and placeholder mismatches on string leaves.
-    """
-    issues: list[str] = []
-
-    for key, ref_value in reference.items():
-        key_path = f"{path}.{key}" if path else key
-
-        if key not in candidate:
-            issues.append(f"missing key: {key_path}")
-            continue
-
-        cand_value = candidate[key]
-        ref_is_obj = isinstance(ref_value, dict)
-        cand_is_obj = isinstance(cand_value, dict)
-
-        if ref_is_obj and cand_is_obj:
-            issues.extend(_compare(ref_value, cand_value, key_path))
-        elif ref_is_obj != cand_is_obj:
-            expected = "object" if ref_is_obj else "string"
-            actual = "object" if cand_is_obj else type(cand_value).__name__
-            issues.append(
-                f"type mismatch at {key_path}: expected {expected}, got {actual}"
-            )
-        elif not isinstance(ref_value, str):
-            # The canonical en.json leaf itself is not a string (e.g. a value
-            # accidentally committed as a number or null). Flag the source, since
-            # placeholders() ignores non-strings and would otherwise pass.
-            issues.append(
-                f"invalid reference value at {key_path}: en.json must use "
-                f"string values, got {type(ref_value).__name__}"
-            )
-        elif not isinstance(cand_value, str):
-            # Both are leaves, but a translation value must be a string; a locale
-            # that turned a string into null/true/123 would otherwise only be
-            # placeholder-checked (and pass) since placeholders() ignores
-            # non-strings.
-            issues.append(
-                f"type mismatch at {key_path}: expected string, got "
-                f"{type(cand_value).__name__}"
-            )
-        else:
-            missing_ph = placeholders(ref_value) - placeholders(cand_value)
-            extra_ph = placeholders(cand_value) - placeholders(ref_value)
-            if missing_ph:
-                issues.append(
-                    f"missing placeholder(s) {sorted(missing_ph)} at {key_path}"
-                )
-            if extra_ph:
-                issues.append(
-                    f"unexpected placeholder(s) {sorted(extra_ph)} at {key_path}"
-                )
-
-    for key in candidate:
-        if key not in reference:
-            key_path = f"{path}.{key}" if path else key
-            issues.append(f"unexpected key: {key_path}")
-
-    return issues
-
-
-def _order_notes(reference: Any, candidate: Any, path: str = "") -> list[str]:
-    """Return informational notes where shared keys are in a different order."""
-    notes: list[str] = []
-    if not (isinstance(reference, dict) and isinstance(candidate, dict)):
-        return notes
-
-    ref_order = [key for key in reference if key in candidate]
-    cand_order = [key for key in candidate if key in reference]
-    if ref_order != cand_order:
-        notes.append(f"key order differs at {path or '(root)'}")
-
-    for key in reference:
-        if key in candidate:
-            key_path = f"{path}.{key}" if path else key
-            notes.extend(_order_notes(reference[key], candidate[key], key_path))
-
-    return notes
-
-
-def _canonical_issues(data: Any, path: str = "") -> list[str]:
-    """Return type problems in the canonical file itself.
-
-    Every leaf must be a string. A non-string leaf in the canonical source would
-    otherwise be silently accepted (``placeholders()`` ignores non-strings), so
-    it is validated once here rather than relying on a locale comparison.
-    """
-    issues: list[str] = []
-    for key, value in data.items():
-        key_path = f"{path}.{key}" if path else key
-        if isinstance(value, dict):
-            issues.extend(_canonical_issues(value, key_path))
-        elif not isinstance(value, str):
-            issues.append(
-                f"non-string value at {key_path}: got {type(value).__name__}"
-            )
-    return issues
-
-
 def main() -> int:
     """Validate every locale against the canonical file and report the outcome."""
     print("Validating BTicino translations...\n")
@@ -176,10 +76,10 @@ def main() -> int:
     # Validate the canonical file itself before comparing anything against it, so
     # an invalid en.json fails fast instead of silently defining the contract.
     print(f"{DISPLAY_DIR}/{CANONICAL_LOCALE}")
-    canonical_issues = _canonical_issues(reference)
-    if canonical_issues:
+    canonical = canonical_issues(reference)
+    if canonical:
         print("  FAILED (invalid canonical file)")
-        for issue in canonical_issues:
+        for issue in canonical:
             print(f"    {issue}")
         print("\nTranslation validation failed.")
         return 1
@@ -207,7 +107,7 @@ def main() -> int:
             print("  FAILED\n")
             continue
 
-        issues = _compare(reference, candidate)
+        issues = compare(reference, candidate)
         if issues:
             ok = False
             print("  FAILED")
@@ -216,7 +116,7 @@ def main() -> int:
         else:
             print("  PASS")
 
-        for note in _order_notes(reference, candidate):
+        for note in order_notes(reference, candidate):
             print(f"    note: {note}")
         print()
 
