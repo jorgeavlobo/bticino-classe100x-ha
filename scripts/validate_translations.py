@@ -75,6 +75,22 @@ def main() -> int:
         ("type mismatch detected", _has(_compare(REFERENCE, type_mismatch), "type mismatch at config"))
     )
 
+    # A leaf that stops being a string (null/number/bool) is a type mismatch,
+    # even though it has no placeholders to compare.
+    non_string_leaf = {
+        "config": {"title": "BTicino", "note": "Connect to {host}"},
+        "entity": {"sensor": {"health": {"name": 123}}},
+    }
+    checks.append(
+        (
+            "non-string leaf detected",
+            _has(
+                _compare(REFERENCE, non_string_leaf),
+                "type mismatch at entity.sensor.health.name: expected string, got int",
+            ),
+        )
+    )
+
     # A dropped placeholder in a translated value is reported.
     dropped_placeholder = {
         "config": {"title": "BTicino", "note": "Verbindung fehlgeschlagen"},

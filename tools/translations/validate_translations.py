@@ -84,6 +84,15 @@ def _compare(reference: dict, candidate: dict, path: str = "") -> list[str]:
             issues.append(
                 f"type mismatch at {key_path}: expected {expected}, got {actual}"
             )
+        elif not isinstance(cand_value, str):
+            # Both are leaves, but a translation value must be a string; a locale
+            # that turned a string into null/true/123 would otherwise only be
+            # placeholder-checked (and pass) since placeholders() ignores
+            # non-strings.
+            issues.append(
+                f"type mismatch at {key_path}: expected string, got "
+                f"{type(cand_value).__name__}"
+            )
         else:
             missing_ph = placeholders(ref_value) - placeholders(cand_value)
             extra_ph = placeholders(cand_value) - placeholders(ref_value)
