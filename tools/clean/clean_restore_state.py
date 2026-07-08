@@ -1,54 +1,36 @@
-﻿"""Clean BTicino CLASSE100X restore states from Home Assistant."""
+"""Clean BTicino CLASSE100X restore states from Home Assistant."""
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from shared.backup import create_backup
-from shared.jsonfile import read_json, write_json
+from shared.cleaner import run_cleanup
+from shared.cli import ToolOptions, build_parser, parse_options
 from shared.matching import contains_bticino_reference
 from shared.paths import restore_state_path
 
 
-def clean_restore_state(config_path: Path) -> None:
+def clean_restore_state(options: ToolOptions) -> bool:
     """Remove BTicino-related entries from core.restore_state."""
-    path = restore_state_path(config_path)
 
-    if not path.exists():
-        print(f"Restore state not found: {path}")
-        return
+    def mutate(restore_state: dict) -> dict[str, int]:
+        entries = restore_state.get("data", [])
+        kept = [entry for entry in entries if not contains_bticino_reference(entry)]
+        restore_state["data"] = kept
 
-    backup_path = create_backup(path)
-    if backup_path:
-        print(f"Backup created: {backup_path}")
+        return {"restore state entries": len(entries) - len(kept)}
 
-    restore_state = read_json(path)
-
-    entries = restore_state.get("data", [])
-    before_entries = len(entries)
-
-    restore_state["data"] = [
-        entry for entry in entries if not contains_bticino_reference(entry)
-    ]
-
-    removed_entries = before_entries - len(restore_state["data"])
-
-    write_json(path, restore_state)
-
-    print(f"Removed restore state entries: {removed_entries}")
+    return run_cleanup(options, restore_state_path(options.config_path), mutate)
 
 
 def main() -> None:
     """Run the restore state cleanup tool."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="/config", help="Home Assistant config path")
-    args = parser.parse_args()
-
-    clean_restore_state(Path(args.config))
+    parser = build_parser("Clean BTicino entries from core.restore_state")
+    if not clean_restore_state(parse_options(parser)):
+        sys.exit(1)
 
 
 if __name__ == "__main__":

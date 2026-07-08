@@ -1,62 +1,44 @@
-﻿"""Clean BTicino CLASSE100X config entries from Home Assistant."""
+"""Clean BTicino CLASSE100X config entries from Home Assistant."""
 
 from __future__ import annotations
 
-import argparse
 from pathlib import Path
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from shared.backup import create_backup
-from shared.jsonfile import read_json, write_json
+from shared.cleaner import run_cleanup
+from shared.cli import ToolOptions, build_parser, parse_options
 from shared.matching import contains_bticino_reference
 from shared.paths import config_entries_path
 
 
-def clean_config_entries(config_path: Path) -> None:
+def _is_bticino_entry(entry: dict) -> bool:
+    """Return true for BTicino or BTicino-related HomeKit config entries."""
+    return entry.get("domain") == "bticino_classe100x" or (
+        entry.get("domain") == "homekit" and contains_bticino_reference(entry)
+    )
+
+
+def clean_config_entries(options: ToolOptions) -> bool:
     """Remove BTicino and BTicino-related HomeKit config entries."""
-    path = config_entries_path(config_path)
 
-    if not path.exists():
-        print(f"Config entries file not found: {path}")
-        return
+    def mutate(config_entries: dict) -> dict[str, int]:
+        data = config_entries.setdefault("data", {})
+        entries = data.get("entries", [])
+        kept = [entry for entry in entries if not _is_bticino_entry(entry)]
+        data["entries"] = kept
 
-    backup_path = create_backup(path)
-    if backup_path:
-        print(f"Backup created: {backup_path}")
+        return {"config entries": len(entries) - len(kept)}
 
-    config_entries = read_json(path)
-
-    entries = config_entries["data"].get("entries", [])
-    before_entries = len(entries)
-
-    config_entries["data"]["entries"] = [
-        entry
-        for entry in entries
-        if not (
-            entry.get("domain") == "bticino_classe100x"
-            or (
-                entry.get("domain") == "homekit"
-                and contains_bticino_reference(entry)
-            )
-        )
-    ]
-
-    removed_entries = before_entries - len(config_entries["data"]["entries"])
-
-    write_json(path, config_entries)
-
-    print(f"Removed config entries: {removed_entries}")
+    return run_cleanup(options, config_entries_path(options.config_path), mutate)
 
 
 def main() -> None:
     """Run the config entries cleanup tool."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="/config", help="Home Assistant config path")
-    args = parser.parse_args()
-
-    clean_config_entries(Path(args.config))
+    parser = build_parser("Clean BTicino entries from core.config_entries")
+    if not clean_config_entries(parse_options(parser)):
+        sys.exit(1)
 
 
 if __name__ == "__main__":
