@@ -85,6 +85,13 @@ def _identifiers_reference_bticino(identifiers: Any) -> bool:
     )
 
 
+def _line_references_bticino(line: str) -> bool:
+    """Return true if a text line references BTicino by token or legacy id."""
+    return STRUCTURAL_TOKEN in line.lower() or any(
+        legacy_id in line for legacy_id in LEGACY_ENTITY_IDS
+    )
+
+
 def _restore_state_entity_id(entry: Any) -> Any:
     """Return the entity_id carried by a restore-state entry, if any."""
     if isinstance(entry, dict):
@@ -222,31 +229,37 @@ def find_references(options: ToolOptions) -> ScanResult:
             continue
 
         for index, line in enumerate(lines, start=1):
-            lowered = line.lower()
             # Match the integration token or an exact legacy entity id (the same
             # ids the clean tools remove), so a stale dashboard/script reference
             # is not missed.
-            if STRUCTURAL_TOKEN not in lowered and not any(
-                legacy_id in line for legacy_id in LEGACY_ENTITY_IDS
-            ):
+            if not _line_references_bticino(line):
                 continue
 
-            if any(hacs_id in line for hacs_id in hacs_entity_ids):
-                hacs += 1
-                print(f"[HACS] {path.name}:{index}: {line.strip()}")
-            else:
+            # A single compact JSON line (Home Assistant writes .storage on one
+            # line) can reference both a HACS entity and a real BTicino entity.
+            # Remove the HACS entity ids first; only if no BTicino reference
+            # remains is the line HACS-only, so a real reference is never
+            # downgraded to informational.
+            remainder = line
+            for hacs_id in hacs_entity_ids:
+                remainder = remainder.replace(hacs_id, "")
+
+            if _line_references_bticino(remainder):
                 confirmed += 1
                 print(f"{path.name}:{index}: {line.strip()}")
+            else:
+                hacs += 1
+                print(f"[HACS] {path.name}:{index}: {line.strip()}")
 
     log.info(
-        "Found %d confirmed reference(s) and %d HACS-managed entity/entities in %s",
+        "Confirmed BTicino references: %d; HACS-managed entities: %d (in %s)",
         confirmed,
         hacs,
         storage,
     )
     if unreadable:
         log.warning(
-            "%d file(s) could not be read; the scan is incomplete", unreadable
+            "%d files could not be read; the scan is incomplete", unreadable
         )
 
     return ScanResult(

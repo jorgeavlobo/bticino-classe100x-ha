@@ -23,6 +23,7 @@ LEGACY_ENTITY_IDS: tuple[str, ...] = (
     "automation.pedestrian_door_opening",
 )
 
+
 def _entity_id_of(value: Any) -> str | None:
     """Return the entity_id carried by a registry or restore-state entry."""
     if not isinstance(value, dict):

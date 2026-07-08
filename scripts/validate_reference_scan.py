@@ -128,6 +128,17 @@ LOVELACE = json.dumps(
 # A dashboard that references only an exact legacy entity id (no integration
 # token) must still be reported, matching what the clean tools remove.
 LEGACY_DASHBOARD = json.dumps({"cards": [{"entity": "button.condominium_gate"}]})
+# A single compact dashboard line referencing both a HACS entity and a real
+# BTicino entity must be counted as a confirmed reference, not downgraded to
+# HACS. ``uptime`` appears only here so it can be asserted precisely.
+MIXED_DASHBOARD = json.dumps(
+    {
+        "cards": [
+            {"entity": f"update.{DOMAIN}_update"},
+            {"entity": f"sensor.{DOMAIN}_uptime"},
+        ]
+    }
+)
 
 
 def _write_fixture(base: Path) -> None:
@@ -139,6 +150,7 @@ def _write_fixture(base: Path) -> None:
     (storage / "core.restore_state").write_text(json.dumps(RESTORE_STATE), "utf-8")
     (storage / "lovelace").write_text(LOVELACE, "utf-8")
     (storage / "lovelace.legacy").write_text(LEGACY_DASHBOARD, "utf-8")
+    (storage / "lovelace.mixed").write_text(MIXED_DASHBOARD, "utf-8")
 
 
 def _scan() -> tuple[object, str]:
@@ -176,6 +188,18 @@ def main() -> int:
     )
     checks.append(
         ("legacy dashboard reference is detected", "button.condominium_gate" in output)
+    )
+    # A line that mixes a HACS entity and a real BTicino entity must be confirmed
+    # (not downgraded to informational). "uptime" appears only on that line.
+    uptime_lines = [
+        line for line in output.splitlines() if f"sensor.{DOMAIN}_uptime" in line
+    ]
+    checks.append(
+        (
+            "mixed HACS+real dashboard line is confirmed",
+            bool(uptime_lines)
+            and all(not line.startswith("[HACS]") for line in uptime_lines),
+        )
     )
 
     bticino_entity = ENTITY_REGISTRY["data"]["entities"][0]
