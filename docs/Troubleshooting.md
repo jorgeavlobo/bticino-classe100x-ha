@@ -11,9 +11,9 @@ the integration ships the translations.
 lowercase slug (`healthy`, `slow`, `offline`, `success`, `failed`, `never`) and
 provides the matching labels under
 `entity.sensor.<key>.state.<slug>` in every language file
-(`strings.json`, `translations/en.json`, `translations/pt.json`,
-`translations/fr.json`). Home Assistant's own translation loader resolves those
-keys correctly for every language — this is verified in CI by
+(`translations/en.json`, `translations/pt.json`, `translations/fr.json`). Home
+Assistant's own translation loader resolves those keys correctly for every
+language — this is verified in CI by
 [`scripts/validate_translations.py`](../scripts/validate_translations.py).
 
 Two things can make the correct labels *appear* untranslated in the UI:
@@ -52,5 +52,5 @@ python3 scripts/validate_translations.py
 ```
 
 It flattens each language file the same way Home Assistant does and confirms
-every language exposes exactly the keys declared in `strings.json`. A `0` exit
-code means the translations are complete and consistent.
+every language exposes exactly the keys declared in `translations/en.json`. A
+`0` exit code means the translations are complete and consistent.

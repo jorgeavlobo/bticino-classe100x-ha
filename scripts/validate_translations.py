@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Validate BTicino CLASSE100X translation completeness.
 
-``strings.json`` is the English source of truth. Every language file under
-``translations/`` must expose exactly the same set of keys, so a new string
-(for example an added enum sensor ``state`` slug) cannot be shipped in one
-language while silently missing in another.
+Home Assistant loads a custom integration's translations from
+``translations/<language>.json`` at runtime, so ``translations/en.json`` is the
+canonical English source. Every other language file must expose exactly the same
+set of keys, so a new string (for example an added enum sensor ``state`` slug)
+cannot be shipped in one language while silently missing in another.
 
 The check is deliberately dependency-free: it flattens each file the same way
 Home Assistant's ``recursive_flatten`` helper does and compares the resulting
@@ -12,8 +13,8 @@ key sets. Run it locally or in CI:
 
     python3 scripts/validate_translations.py
 
-Exit code ``0`` means every language matches ``strings.json``; ``1`` means a
-file is missing, invalid, or its keys drift from the source.
+Exit code ``0`` means every language matches ``en.json``; ``1`` means a file is
+missing, invalid, or its keys drift from the source.
 """
 
 from __future__ import annotations
@@ -23,8 +24,8 @@ from pathlib import Path
 import sys
 
 COMPONENT = Path(__file__).resolve().parents[1] / "custom_components" / "bticino_classe100x"
-STRINGS = COMPONENT / "strings.json"
 TRANSLATIONS = COMPONENT / "translations"
+SOURCE = TRANSLATIONS / "en.json"
 
 
 def recursive_flatten(prefix: str, data: dict) -> dict[str, object]:
@@ -58,10 +59,10 @@ def load_keys(path: Path) -> set[str] | None:
 
 
 def main() -> int:
-    """Validate that every language file matches strings.json."""
-    source = load_keys(STRINGS)
+    """Validate that every language file matches en.json."""
+    source = load_keys(SOURCE)
     if source is None:
-        print(f"ERROR: missing or invalid source of truth: {STRINGS}")
+        print(f"ERROR: missing or invalid source of truth: {SOURCE}")
         return 1
 
     language_files = sorted(TRANSLATIONS.glob("*.json"))
@@ -80,7 +81,7 @@ def main() -> int:
         extra = keys - source
         if missing or extra:
             ok = False
-            print(f"FAIL: {path.name} does not match strings.json")
+            print(f"FAIL: {path.name} does not match {SOURCE.name}")
             for key in sorted(missing):
                 print(f"  missing: {key}")
             for key in sorted(extra):
@@ -89,7 +90,7 @@ def main() -> int:
             print(f"OK: {path.name} ({len(keys)} keys)")
 
     if ok:
-        print(f"\nAll {len(language_files)} language file(s) match strings.json.")
+        print(f"\nAll {len(language_files)} language file(s) match {SOURCE.name}.")
         return 0
 
     print("\nTranslation validation failed.")
