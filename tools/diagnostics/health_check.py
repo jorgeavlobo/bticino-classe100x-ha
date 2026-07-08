@@ -16,6 +16,7 @@ from diagnostics.checks.config_entries import ConfigEntriesCheck
 from diagnostics.checks.device_registry import DeviceRegistryCheck
 from diagnostics.checks.entity_registry import EntityRegistryCheck
 from diagnostics.checks.manifest import ManifestCheck
+from diagnostics.checks.metadata_consistency import MetadataConsistencyCheck
 from diagnostics.checks.restore_state import RestoreStateCheck
 from diagnostics.checks.translations import TranslationsCheck
 from diagnostics.checks.yaml_config import YamlConfigCheck
@@ -32,6 +33,7 @@ def _available_checks() -> dict[str, HealthCheck]:
     """Return all available health checks."""
     return {
         "entity_registry": EntityRegistryCheck(),
+        "metadata_consistency": MetadataConsistencyCheck(),
         "restore_state": RestoreStateCheck(),
         "config_entries": ConfigEntriesCheck(),
         "device_registry": DeviceRegistryCheck(),
