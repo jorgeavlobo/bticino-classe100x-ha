@@ -1,0 +1,116 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BTicino CLASSE100X",
+        "description": "Configura l'accesso SSH al BTicino CLASSE100X.",
+        "data": {
+          "host": "Host",
+          "username": "Nome utente",
+          "auth_method": "Metodo di autenticazione",
+          "ssh_key_path": "Percorso della chiave privata SSH",
+          "password": "Password",
+          "command_timeout": "Timeout dei comandi",
+          "release_delay": "Ritardo di rilascio"
+        }
+      },
+      "init": {
+        "title": "Opzioni BTicino CLASSE100X",
+        "description": "Aggiorna e prova le impostazioni di connessione del BTicino CLASSE100X.",
+        "data": {
+          "host": "Host",
+          "username": "Nome utente",
+          "auth_method": "Metodo di autenticazione",
+          "ssh_key_path": "Percorso della chiave privata SSH",
+          "password": "Password",
+          "command_timeout": "Timeout dei comandi",
+          "release_delay": "Ritardo di rilascio"
+        }
+      }
+    },
+    "error": {
+      "ssh_key_required": "Il percorso della chiave privata SSH è obbligatorio.",
+      "ssh_key_not_found": "Il file della chiave privata SSH non è stato trovato.",
+      "password_auth_not_implemented": "L'autenticazione tramite password non è ancora implementata.",
+      "cannot_connect": "Impossibile connettersi al BTicino CLASSE100X tramite SSH.",
+      "openwebnet_no_response": "SSH funziona, ma OpenWebNet non ha restituito una risposta valida."
+    }
+  },
+  "entity": {
+    "button": {
+      "condominium_gate": {
+        "name": "Cancello condominiale"
+      },
+      "pedestrian_door": {
+        "name": "Porta pedonale"
+      },
+      "test_ssh_connection": {
+        "name": "Prova connessione SSH"
+      }
+    },
+    "binary_sensor": {
+      "connection_status": {
+        "name": "Stato della connessione"
+      }
+    },
+    "sensor": {
+      "health_status": {
+        "name": "Stato di salute",
+        "state": {
+          "healthy": "In salute",
+          "slow": "Lento",
+          "offline": "Non in linea"
+        }
+      },
+      "ssh_latency": {
+        "name": "Latenza SSH"
+      },
+      "openwebnet_latency": {
+        "name": "Latenza OpenWebNet"
+      },
+      "firmware_version": {
+        "name": "Versione firmware"
+      },
+      "os_release": {
+        "name": "Versione del sistema operativo"
+      },
+      "uptime": {
+        "name": "Tempo di attività"
+      },
+      "hostname": {
+        "name": "Nome host"
+      },
+      "mac_address": {
+        "name": "Indirizzo MAC"
+      },
+      "last_test_result": {
+        "name": "Risultato dell'ultimo test",
+        "state": {
+          "success": "Riuscito",
+          "failed": "Fallito"
+        }
+      },
+      "last_successful_test": {
+        "name": "Ultimo test riuscito"
+      },
+      "last_failed_test_status": {
+        "name": "Stato dell'ultimo errore",
+        "state": {
+          "never": "Mai",
+          "failed": "Fallito"
+        }
+      },
+      "last_failed_test": {
+        "name": "Ultimo test fallito"
+      }
+    }
+  },
+  "selector": {
+    "auth_method": {
+      "options": {
+        "ssh_key": "Chiave privata SSH",
+        "password": "Password"
+      }
+    }
+  }
+}

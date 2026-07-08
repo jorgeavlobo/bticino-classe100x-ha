@@ -11,8 +11,9 @@ the integration ships the translations.
 lowercase slug (`healthy`, `slow`, `offline`, `success`, `failed`, `never`) and
 provides the matching labels under
 `entity.sensor.<key>.state.<slug>` in every language file
-(`translations/en.json`, `translations/pt.json`, `translations/fr.json`), which
-is the structure Home Assistant's translation loader reads at runtime.
+(`translations/en.json`, `translations/pt.json`, `translations/fr.json`,
+`translations/de.json`, `translations/it.json`), which is the structure Home
+Assistant's translation loader reads at runtime.
 
 CI does not exercise the Home Assistant runtime; instead
 [`scripts/validate_translations.py`](../scripts/validate_translations.py) checks

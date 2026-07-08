@@ -8,15 +8,10 @@ from typing import Any
 from diagnostics.shared.check import HealthCheck
 from diagnostics.shared.result import HealthCheckResult, fail_result, pass_result
 from diagnostics.shared.storage import read_json_file
+from shared.translations import CANONICAL_LOCALE, REQUIRED_LOCALES, flatten_keys
 
 
 TRANSLATION_FOLDER = Path("custom_components/bticino_classe100x/translations")
-
-REQUIRED_TRANSLATIONS: tuple[str, ...] = (
-    "en.json",
-    "fr.json",
-    "pt.json",
-)
 
 
 class TranslationsCheck(HealthCheck):
@@ -41,7 +36,7 @@ class TranslationsCheck(HealthCheck):
 
         loaded: dict[str, dict[str, Any]] = {}
 
-        for filename in REQUIRED_TRANSLATIONS:
+        for filename in REQUIRED_LOCALES:
             path = folder / filename
 
             if not path.exists():
@@ -51,11 +46,11 @@ class TranslationsCheck(HealthCheck):
             loaded[filename] = read_json_file(path)
             details.append(f"Found translation file: {filename}")
 
-        if "en.json" in loaded:
-            english_keys = _flatten_keys(loaded["en.json"])
+        if CANONICAL_LOCALE in loaded:
+            english_keys = flatten_keys(loaded[CANONICAL_LOCALE])
 
             for filename, data in loaded.items():
-                keys = _flatten_keys(data)
+                keys = flatten_keys(data)
                 missing_keys = sorted(english_keys - keys)
 
                 if missing_keys:
@@ -88,18 +83,3 @@ def _find_translation_folder(config_path: Path) -> Path | None:
         return repository_folder
 
     return None
-
-
-def _flatten_keys(data: dict[str, Any], prefix: str = "") -> set[str]:
-    """Return flattened dictionary keys."""
-    keys: set[str] = set()
-
-    for key, value in data.items():
-        full_key = f"{prefix}.{key}" if prefix else key
-
-        if isinstance(value, dict):
-            keys.update(_flatten_keys(value, full_key))
-        else:
-            keys.add(full_key)
-
-    return keys
