@@ -106,8 +106,10 @@ def confirm(question: str, assume_yes: bool) -> bool:
     """Ask for confirmation on stdin.
 
     Returns ``True`` immediately when ``assume_yes`` is set. A non-interactive
-    stdin (``EOFError``) is treated as "no" so the tools never modify files
-    without an explicit answer.
+    stdin is detected up front with :func:`sys.stdin.isatty` and treated as
+    "no"; end-of-input (``EOFError``) and interrupts (``KeyboardInterrupt``) are
+    also treated as "no", so the tools never modify files without an explicit
+    answer.
     """
     if assume_yes:
         return True
