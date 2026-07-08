@@ -24,9 +24,23 @@ def mentions_bticino(entity: dict[str, Any]) -> bool:
 
 
 def bticino_config_entries(config_entries: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return the BTicino config entries."""
-    entries = config_entries.get("data", {}).get("entries", [])
-    return [entry for entry in entries if entry.get("domain") == DOMAIN]
+    """Return the BTicino config entries.
+
+    Tolerant of a corrupted or schema-drifted storage file: unexpected shapes
+    (a non-dict ``data`` section, a non-list ``entries``, or non-dict entries)
+    are skipped rather than raising.
+    """
+    if not isinstance(config_entries, dict):
+        return []
+    data = config_entries.get("data")
+    entries = data.get("entries") if isinstance(data, dict) else None
+    if not isinstance(entries, list):
+        return []
+    return [
+        entry
+        for entry in entries
+        if isinstance(entry, dict) and entry.get("domain") == DOMAIN
+    ]
 
 
 def bticino_config_entry_ids(config_entries: dict[str, Any]) -> list[str]:

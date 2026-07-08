@@ -67,11 +67,33 @@ class ScanResult(NamedTuple):
 
 
 def _read(path: Path) -> dict[str, Any] | None:
-    """Read a JSON storage file, returning None when it cannot be read."""
+    """Read a JSON storage file, returning None when it cannot be read.
+
+    Home Assistant storage files are always JSON objects; a parsed value that is
+    not a dict is treated as unreadable (corrupt) so the caller records an
+    incomplete scan instead of crashing on a later attribute access.
+    """
     try:
-        return read_json(path)
+        data = read_json(path)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return None
+    return data if isinstance(data, dict) else None
+
+
+def _records(container: Any, *keys: str) -> list[Any]:
+    """Return the list nested under ``keys``, degrading gracefully.
+
+    A corrupted or schema-drifted storage file may not have the expected shape.
+    Any non-dict node along the path, or a final value that is not a list,
+    yields an empty list instead of raising, so the scan never aborts on a
+    single malformed file.
+    """
+    node: Any = container
+    for key in keys:
+        if not isinstance(node, dict):
+            return []
+        node = node.get(key)
+    return node if isinstance(node, list) else []
 
 
 def _identifiers_reference_bticino(identifiers: Any) -> bool:
@@ -127,7 +149,9 @@ def find_references(options: ToolOptions) -> ScanResult:
             unreadable += 1
         else:
             config_entry_ids = set(bticino_config_entry_ids(config_entries))
-            for entry in config_entries.get("data", {}).get("entries", []):
+            for entry in _records(config_entries, "data", "entries"):
+                if not isinstance(entry, dict):
+                    continue
                 domain = entry.get("domain")
                 if domain == DOMAIN:
                     confirmed += 1
@@ -151,9 +175,10 @@ def find_references(options: ToolOptions) -> ScanResult:
             log.warning("Could not read %s", entity_registry_path)
             unreadable += 1
         else:
-            data = registry.get("data", {})
             for bucket in ("entities", "deleted_entities"):
-                for entity in data.get(bucket, []):
+                for entity in _records(registry, "data", bucket):
+                    if not isinstance(entity, dict):
+                        continue
                     entity_id = entity.get("entity_id")
                     if is_hacs_entity(entity) and mentions_bticino(entity):
                         hacs += 1
@@ -186,9 +211,10 @@ def find_references(options: ToolOptions) -> ScanResult:
             log.warning("Could not read %s", device_registry_path)
             unreadable += 1
         else:
-            data = devices.get("data", {})
             for bucket in ("devices", "deleted_devices"):
-                for device in data.get(bucket, []):
+                for device in _records(devices, "data", bucket):
+                    if not isinstance(device, dict):
+                        continue
                     if _identifiers_reference_bticino(device.get("identifiers")):
                         confirmed += 1
                         print(
@@ -203,7 +229,7 @@ def find_references(options: ToolOptions) -> ScanResult:
             log.warning("Could not read %s", restore_state_path)
             unreadable += 1
         else:
-            for entry in restore_state.get("data", []):
+            for entry in _records(restore_state, "data"):
                 # Match on the entry's entity_id, never its free-form state text,
                 # so an unrelated entity whose state mentions a word like
                 # "condominium" (or even the token) is not reported.

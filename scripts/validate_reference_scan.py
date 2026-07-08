@@ -202,6 +202,74 @@ def _scan() -> tuple[object, str]:
     return result, buffer.getvalue()
 
 
+# Corrupted / schema-drifted storage: non-dict entries, a non-list bucket, and a
+# storage file whose top-level JSON is not an object. The scan must degrade
+# gracefully (never raise), still confirm the well-formed BTicino references, and
+# count the unparsable-shape file as unreadable (an incomplete scan).
+MALFORMED_CONFIG_ENTRIES = {
+    "data": {
+        "entries": [
+            "not-a-dict",
+            {"entry_id": "bt1", "domain": DOMAIN, "data": {"host": HOST}},
+        ]
+    }
+}
+MALFORMED_ENTITY_REGISTRY = {
+    "data": {
+        "entities": [
+            42,
+            {
+                "entity_id": f"sensor.{DOMAIN}_health_status",
+                "unique_id": f"{DOMAIN}_health_status",
+                "platform": DOMAIN,
+            },
+        ],
+        # A non-list bucket must be skipped, not iterated.
+        "deleted_entities": "corrupt",
+    }
+}
+MALFORMED_DEVICE_REGISTRY = {
+    "data": {"devices": ["x", {"id": "d1", "identifiers": [[DOMAIN, HOST]]}]}
+}
+MALFORMED_RESTORE_STATE = {
+    "data": [
+        "str",
+        {"state": {"entity_id": f"sensor.{DOMAIN}_uptime", "state": "1"}},
+    ]
+}
+
+
+def _write_malformed_fixture(base: Path) -> None:
+    storage = base / ".storage"
+    storage.mkdir(parents=True, exist_ok=True)
+    (storage / "core.config_entries").write_text(
+        json.dumps(MALFORMED_CONFIG_ENTRIES), "utf-8"
+    )
+    (storage / "core.entity_registry").write_text(
+        json.dumps(MALFORMED_ENTITY_REGISTRY), "utf-8"
+    )
+    # Top-level JSON is a list, not an object: must be treated as unreadable.
+    (storage / "core.device_registry").write_text(
+        json.dumps([MALFORMED_DEVICE_REGISTRY]), "utf-8"
+    )
+    (storage / "core.restore_state").write_text(
+        json.dumps(MALFORMED_RESTORE_STATE), "utf-8"
+    )
+
+
+def _scan_malformed() -> object:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        base = Path(temp_dir)
+        _write_malformed_fixture(base)
+        buffer = io.StringIO()
+        stdout = sys.stdout
+        sys.stdout = buffer
+        try:
+            return find_references(ToolOptions(config_path=base))
+        finally:
+            sys.stdout = stdout
+
+
 def main() -> int:
     """Run every assertion and report the outcome."""
     checks: list[tuple[str, bool]] = []
@@ -302,6 +370,21 @@ def main() -> int:
 
     checks.append(("is_bticino_entity accepts BTicino", is_bticino_entity(bticino_entity, {"bt1"})))
     checks.append(("is_bticino_entity rejects HACS", not is_bticino_entity(hacs_entity, {"bt1"})))
+
+    # Corrupted / schema-drifted storage must degrade gracefully: the scan runs
+    # to completion (no exception), still confirms the well-formed references
+    # (one per config/entity/restore file = 3), and flags the file whose
+    # top-level JSON is not an object as unreadable.
+    try:
+        malformed = _scan_malformed()
+        malformed_ok = (
+            malformed.storage_found
+            and malformed.confirmed >= 3
+            and malformed.unreadable >= 1
+        )
+    except Exception:  # noqa: BLE001 - any raise here is the failure under test
+        malformed_ok = False
+    checks.append(("malformed storage degrades gracefully", malformed_ok))
 
     ok = True
     for label, passed in checks:
