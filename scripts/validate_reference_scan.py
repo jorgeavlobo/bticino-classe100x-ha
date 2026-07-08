@@ -49,6 +49,16 @@ CONFIG_ENTRIES = {
                     "entities": [f"button.{DOMAIN}_condominium_gate"],
                 },
             },
+            # A HomeKit bridge that exposes ONLY a HACS management entity (whose
+            # id embeds the integration name) must not be confirmed or cleaned:
+            # HACS entities are informational only.
+            {
+                "entry_id": "hk_hacs_only",
+                "domain": "homekit",
+                "data": {
+                    "entities": [f"switch.{DOMAIN}_pre_release"],
+                },
+            },
         ]
     }
 }
@@ -309,6 +319,11 @@ def main() -> int:
     checks.append(
         ("HomeKit bridge referencing BTicino is detected", "HomeKit config entry" in output)
     )
+    # A HomeKit bridge that exposes only a HACS-managed entity must not be
+    # reported as a confirmed BTicino reference (HACS ids are stripped first).
+    checks.append(
+        ("HACS-only HomeKit bridge is not confirmed", "hk_hacs_only" not in output)
+    )
     checks.append(
         ("legacy dashboard reference is detected", "button.condominium_gate" in output)
     )
@@ -374,6 +389,8 @@ def main() -> int:
 
     legacy_entity = ENTITY_REGISTRY["data"]["entities"][4]
     foreign_entity = ENTITY_REGISTRY["data"]["entities"][5]
+    hacs_only_homekit = CONFIG_ENTRIES["data"]["entries"][3]
+    real_homekit = CONFIG_ENTRIES["data"]["entries"][2]
     legacy_id_in_state = RESTORE_STATE["data"][4]
     substring_restore = RESTORE_STATE["data"][5]
     room_prefixed_restore = RESTORE_STATE["data"][6]
@@ -384,6 +401,18 @@ def main() -> int:
         (
             "cleaner ignores foreign object-id-substring entity",
             not contains_bticino_reference(foreign_entity),
+        )
+    )
+    checks.append(
+        (
+            "cleaner matches real HomeKit bridge",
+            contains_bticino_reference(real_homekit),
+        )
+    )
+    checks.append(
+        (
+            "cleaner ignores HACS-only HomeKit bridge",
+            not contains_bticino_reference(hacs_only_homekit),
         )
     )
     checks.append(("cleaner ignores HACS entity", not contains_bticino_reference(hacs_entity)))
@@ -418,6 +447,21 @@ def main() -> int:
         "platform": DOMAIN,
     }
     checks.append(("non-HACS update entity is not HACS", not is_hacs_managed(non_hacs_update)))
+    # A restore-state entry whose id merely starts with the HACS id but is not
+    # exactly it (e.g. a suffixed ``..._update_2``) must NOT be treated as HACS:
+    # matching is by exact id, not prefix. It is a genuine BTicino entity.
+    suffixed_update = {
+        "state": {"entity_id": f"update.{DOMAIN}_update_2", "state": "on"}
+    }
+    checks.append(
+        ("suffixed update entity is not HACS", not is_hacs_managed(suffixed_update))
+    )
+    checks.append(
+        (
+            "suffixed update entity is a BTicino reference",
+            contains_bticino_reference(suffixed_update),
+        )
+    )
 
     checks.append(("is_bticino_entity accepts BTicino", is_bticino_entity(bticino_entity, {"bt1"})))
     checks.append(("is_bticino_entity rejects HACS", not is_bticino_entity(hacs_entity, {"bt1"})))

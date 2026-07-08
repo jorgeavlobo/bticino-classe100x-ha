@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from shared.hacs import HACS_ENTITY_ID_PREFIXES, is_hacs_platform
+from shared.hacs import HACS_ENTITY_IDS, is_hacs_platform
 
 
 BTICINO_STRINGS: tuple[str, ...] = (
@@ -96,14 +96,14 @@ def is_hacs_managed(value: Any) -> bool:
 
     When the value carries a ``platform`` (entity registry entries) it is
     trusted exclusively, so an integration-provided ``update``/``switch`` entity
-    is never misclassified. The entity_id-prefix heuristic is only used as a
-    fallback for restore-state entries, which do not carry the platform.
+    is never misclassified. The exact-entity-id fallback is only used for
+    restore-state entries, which do not carry the platform.
     """
     if isinstance(value, dict) and "platform" in value:
         return is_hacs_platform(value)
 
     entity_id = _entity_id_of(value)
-    return entity_id is not None and entity_id.startswith(HACS_ENTITY_ID_PREFIXES)
+    return entity_id in HACS_ENTITY_IDS
 
 
 def _registry_entry_references_bticino(entry: dict[str, Any]) -> bool:
@@ -145,7 +145,9 @@ def contains_bticino_reference(value: Any) -> bool:
       identifiers — the entity_id, unique_id prefix or platform.
 
     Any other shape (config entries, HomeKit bridges, dashboards) falls back to
-    the token/legacy-id text scan.
+    the token/legacy-id text scan. HACS entity ids are stripped from the text
+    first, so a HomeKit bridge that exposes only a HACS-managed entity (whose id
+    embeds the integration name) is not treated as a BTicino reference.
     """
     if is_hacs_managed(value):
         return False
@@ -158,5 +160,7 @@ def contains_bticino_reference(value: Any) -> bool:
             return _registry_entry_references_bticino(value)
 
     text = json.dumps(value, ensure_ascii=False)
+    for hacs_id in HACS_ENTITY_IDS:
+        text = text.replace(hacs_id, "")
 
     return any(item in text for item in BTICINO_STRINGS + LEGACY_ENTITY_IDS)
