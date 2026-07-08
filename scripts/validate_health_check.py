@@ -232,8 +232,10 @@ MULTIPLE_CONFIG_ENTRIES = {
     }
 }
 
+_Mutation = Callable[[dict[str, Any]], None]
+
 SCENARIOS: tuple[
-    tuple[str, Callable | None, str, str, str | None, dict[str, Any] | None], ...
+    tuple[str, _Mutation | None, str, str, str | None, dict[str, Any] | None], ...
 ] = (
     # label, mutation, entity status, metadata status, substring, config override
     ("clean registry", None, "PASS", "PASS", None, None),

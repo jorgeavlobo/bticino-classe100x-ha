@@ -7,12 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from diagnostics.checks.expected_entities import (
-    DOMAIN,
     EXPECTED_ENTITIES,
     LEGACY_ENTITY_ID_FRAGMENTS,
 )
 from diagnostics.shared.check import HealthCheck
 from diagnostics.shared.entities import (
+    DOMAIN,
     bticino_config_entry_ids,
     bticino_host,
     find_bticino_entities,

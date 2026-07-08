@@ -54,4 +54,8 @@ def find_bticino_entities(
     entities: list[dict[str, Any]], config_entry_ids: set[str]
 ) -> list[dict[str, Any]]:
     """Return the BTicino entities from a list of registry entries."""
-    return [entity for entity in entities if is_bticino_entity(entity, config_entry_ids)]
+    return [
+        entity
+        for entity in entities
+        if is_bticino_entity(entity, config_entry_ids)
+    ]

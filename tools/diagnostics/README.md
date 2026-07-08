@@ -19,9 +19,10 @@ descriptions). It reports:
 - incomplete migrations (an old and a new unique ID present at the same time),
 - stale BTicino entries left in `deleted_entities`,
 - missing expected entities and unexpected extra BTicino entities,
-- duplicated entity IDs / unique IDs and orphaned or unlinked entities,
+- duplicated entity IDs / unique IDs and orphaned or unlinked entities.
 
-with the exact entity ID, unique ID, reason and suggested cleanup action.
+Each finding includes the exact entity ID, unique ID, reason and suggested
+cleanup action.
 
 The `metadata_consistency` check compares the metadata Home Assistant persisted
 for each present entity (`translation_key`, `entity_category`,
