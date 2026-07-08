@@ -38,6 +38,13 @@
           "release_delay": "Ritardo di rilascio"
         }
       }
+    },
+    "error": {
+      "ssh_key_required": "Il percorso della chiave privata SSH è obbligatorio.",
+      "ssh_key_not_found": "Il file della chiave privata SSH non è stato trovato.",
+      "password_auth_not_implemented": "L'autenticazione tramite password non è ancora implementata.",
+      "cannot_connect": "Impossibile connettersi al BTicino CLASSE100X tramite SSH.",
+      "openwebnet_no_response": "SSH funziona, ma OpenWebNet non ha restituito una risposta valida."
     }
   },
   "entity": {
