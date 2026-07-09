@@ -121,6 +121,13 @@ dashboard YAML.
 See [docs/Dashboard.md](docs/Dashboard.md) for the rationale and a ready-to-use
 example dashboard.
 
+## Translations
+
+User-visible strings are available in English, Portuguese, French, German and
+Italian. English is the authoritative source; a validator in CI keeps every
+language in sync. See [docs/Translations.md](docs/Translations.md) for the
+maintenance policy and how to add a new language.
+
 ## HomeKit
 
 The recommended HomeKit setup is a YAML-defined HomeKit Bridge with explicit entity inclusion.
@@ -142,7 +149,6 @@ HomeKit pairing must be done from the same local network. Pairing over VPN may f
 - Improved health attributes
 - Better uptime formatting
 - Entity categories
-- Translation keys
 - Dashboard screenshots
 - Doorbell detection
 - Incoming call detection

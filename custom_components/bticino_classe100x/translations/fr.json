@@ -13,7 +13,18 @@
           "command_timeout": "Délai d'expiration des commandes",
           "release_delay": "Délai de relâchement"
         }
-      },
+      }
+    },
+    "error": {
+      "ssh_key_required": "Le chemin de la clé privée SSH est obligatoire.",
+      "ssh_key_not_found": "Le fichier de clé privée SSH est introuvable.",
+      "password_auth_not_implemented": "L'authentification par mot de passe n'est pas encore implémentée.",
+      "cannot_connect": "Impossible de se connecter au BTicino CLASSE100X par SSH.",
+      "openwebnet_no_response": "SSH fonctionne, mais OpenWebNet n'a pas renvoyé de réponse valide."
+    }
+  },
+  "options": {
+    "step": {
       "init": {
         "title": "Options BTicino CLASSE100X",
         "description": "Mettre à jour et tester les paramètres de connexion du BTicino CLASSE100X.",

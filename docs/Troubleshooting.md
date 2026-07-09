@@ -10,14 +10,17 @@ the integration ships the translations.
 **This is not an integration bug.** The integration exposes each enum state as a
 lowercase slug (`healthy`, `slow`, `offline`, `success`, `failed`, `never`) and
 provides the matching labels under
-`entity.sensor.<key>.state.<slug>` in every language file
-(`translations/en.json`, `translations/pt.json`, `translations/fr.json`), which
-is the structure Home Assistant's translation loader reads at runtime.
+`entity.sensor.<key>.state.<slug>` in every language file under
+`custom_components/bticino_classe100x/translations/` (`en.json`, `pt.json`,
+`fr.json`, `de.json`, `it.json`), which is the structure Home Assistant's
+translation loader reads at runtime.
 
 CI does not exercise the Home Assistant runtime; instead
-[`scripts/validate_translations.py`](../scripts/validate_translations.py) checks
-translation *completeness* — that every language file exposes exactly the same
-keys as `translations/en.json` — so no language can silently omit a state slug.
+[`tools/translations/validate_translations.py`](../tools/translations/validate_translations.py)
+checks translation *consistency* — that every language file exposes exactly the
+same keys, structure and placeholders as the canonical `en.json` — so no language
+can silently omit a state slug. See [Translations.md](Translations.md) for the
+full policy.
 
 Two things can make the correct labels *appear* untranslated in the UI:
 
@@ -51,9 +54,10 @@ bundle is stale, not missing.
 Run the validator from the repository root:
 
 ```console
-python3 scripts/validate_translations.py
+python3 tools/translations/validate_translations.py
 ```
 
-It flattens each language file the same way Home Assistant does and confirms
-every language exposes exactly the keys declared in `translations/en.json`. A
-`0` exit code means the translations are complete and consistent.
+It compares every language file under
+`custom_components/bticino_classe100x/translations/` against the canonical
+`en.json` and confirms each exposes exactly the same keys, structure and
+placeholders. A `0` exit code means the translations are complete and consistent.

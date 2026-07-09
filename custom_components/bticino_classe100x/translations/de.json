@@ -1,0 +1,127 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BTicino CLASSE100X",
+        "description": "SSH-Zugriff auf das BTicino CLASSE100X konfigurieren.",
+        "data": {
+          "host": "Host",
+          "username": "Benutzername",
+          "auth_method": "Authentifizierungsmethode",
+          "ssh_key_path": "Pfad zum privaten SSH-Schlüssel",
+          "password": "Passwort",
+          "command_timeout": "Befehls-Timeout",
+          "release_delay": "Freigabeverzögerung"
+        }
+      }
+    },
+    "error": {
+      "ssh_key_required": "Der Pfad zum privaten SSH-Schlüssel ist erforderlich.",
+      "ssh_key_not_found": "Die private SSH-Schlüsseldatei wurde nicht gefunden.",
+      "password_auth_not_implemented": "Die Passwort-Authentifizierung ist noch nicht implementiert.",
+      "cannot_connect": "Verbindung zum BTicino CLASSE100X über SSH nicht möglich.",
+      "openwebnet_no_response": "SSH funktioniert, aber OpenWebNet hat keine gültige Antwort zurückgegeben."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BTicino CLASSE100X Optionen",
+        "description": "Verbindungseinstellungen des BTicino CLASSE100X aktualisieren und testen.",
+        "data": {
+          "host": "Host",
+          "username": "Benutzername",
+          "auth_method": "Authentifizierungsmethode",
+          "ssh_key_path": "Pfad zum privaten SSH-Schlüssel",
+          "password": "Passwort",
+          "command_timeout": "Befehls-Timeout",
+          "release_delay": "Freigabeverzögerung"
+        }
+      }
+    },
+    "error": {
+      "ssh_key_required": "Der Pfad zum privaten SSH-Schlüssel ist erforderlich.",
+      "ssh_key_not_found": "Die private SSH-Schlüsseldatei wurde nicht gefunden.",
+      "password_auth_not_implemented": "Die Passwort-Authentifizierung ist noch nicht implementiert.",
+      "cannot_connect": "Verbindung zum BTicino CLASSE100X über SSH nicht möglich.",
+      "openwebnet_no_response": "SSH funktioniert, aber OpenWebNet hat keine gültige Antwort zurückgegeben."
+    }
+  },
+  "entity": {
+    "button": {
+      "condominium_gate": {
+        "name": "Gemeinschaftstor"
+      },
+      "pedestrian_door": {
+        "name": "Fußgängertür"
+      },
+      "test_ssh_connection": {
+        "name": "SSH-Verbindung testen"
+      }
+    },
+    "binary_sensor": {
+      "connection_status": {
+        "name": "Verbindungsstatus"
+      }
+    },
+    "sensor": {
+      "health_status": {
+        "name": "Systemzustand",
+        "state": {
+          "healthy": "In Ordnung",
+          "slow": "Langsam",
+          "offline": "Offline"
+        }
+      },
+      "ssh_latency": {
+        "name": "SSH-Latenz"
+      },
+      "openwebnet_latency": {
+        "name": "OpenWebNet-Latenz"
+      },
+      "firmware_version": {
+        "name": "Firmware-Version"
+      },
+      "os_release": {
+        "name": "Betriebssystemversion"
+      },
+      "uptime": {
+        "name": "Betriebszeit"
+      },
+      "hostname": {
+        "name": "Hostname"
+      },
+      "mac_address": {
+        "name": "MAC-Adresse"
+      },
+      "last_test_result": {
+        "name": "Letztes Testergebnis",
+        "state": {
+          "success": "Erfolgreich",
+          "failed": "Fehlgeschlagen"
+        }
+      },
+      "last_successful_test": {
+        "name": "Letzter erfolgreicher Test"
+      },
+      "last_failed_test_status": {
+        "name": "Status des letzten Fehlers",
+        "state": {
+          "never": "Nie",
+          "failed": "Fehlgeschlagen"
+        }
+      },
+      "last_failed_test": {
+        "name": "Letzter fehlgeschlagener Test"
+      }
+    }
+  },
+  "selector": {
+    "auth_method": {
+      "options": {
+        "ssh_key": "Privater SSH-Schlüssel",
+        "password": "Passwort"
+      }
+    }
+  }
+}
