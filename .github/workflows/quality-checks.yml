@@ -5,10 +5,16 @@ name: Quality Checks
 # which check regressed. Future checks (linting, mypy, unit tests, coverage, …)
 # are added here as new jobs without redesigning the pipeline.
 #
-# Third-party actions are pinned to full commit SHAs for supply-chain safety and
-# reproducible runs; the trailing comment records the tracked release tag, or the
-# branch for actions that publish no releases (home-assistant/actions). Dependabot
-# keeps the pins current (see .github/dependabot.yml).
+# Third-party actions are pinned to full commit SHAs for supply-chain safety; the
+# trailing comment records the tracked release tag, or the branch for actions that
+# publish no releases (home-assistant/actions). Dependabot keeps the pins current
+# (see .github/dependabot.yml).
+#
+# Caveat: the Hassfest and HACS jobs are official Home Assistant / HACS validators
+# whose actions run upstream-maintained container images (ghcr.io/...) that are
+# not digest-pinned. That is deliberate — these checks must validate against the
+# *current* HA/HACS requirements, and the images share the pinned actions' trust
+# boundary. The SHA pin still prevents a tampered action definition from running.
 
 on:
   push:
