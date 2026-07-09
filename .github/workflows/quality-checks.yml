@@ -57,8 +57,15 @@ jobs:
         with:
           python-version: "3.13"
       - name: Validate every translation file is valid JSON
+        shell: bash
         run: |
-          for file in custom_components/bticino_classe100x/translations/*.json; do
+          shopt -s nullglob
+          files=(custom_components/bticino_classe100x/translations/*.json)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No translation files found under custom_components/bticino_classe100x/translations/" >&2
+            exit 1
+          fi
+          for file in "${files[@]}"; do
             echo "Validating $file"
             python3 -m json.tool "$file" > /dev/null
           done
