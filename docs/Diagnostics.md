@@ -31,10 +31,10 @@ which runs in the **Diagnostics** CI workflow.
 | **MAC address** | Partially redacted | Vendor OUI kept; device half masked (`00:03:50:**:**:**`). |
 | **Hostname** | Partially redacted | Model prefix kept; MAC + UUID tail dropped (`C1X-<redacted>`). |
 | **Kernel** (`uname -a`) | Partially redacted | Version and architecture kept; embedded node name dropped. |
-| **Last error** | Partially redacted | SSH key path, host, hostname and username removed; the failure is kept. |
+| **Last error** | Partially redacted | SSH key path, host, hostname and username are replaced with `<redacted-…>` placeholders; the failure message is kept. |
 | **Host** | Fully redacted | Only the address family is kept (`<redacted-ipv4-address>`). |
 | **Username** | Fully redacted | `<redacted-username>`. |
-| Passwords, SSH private key contents, SSH private key **path** | Never included | Not present in the output at all. |
+| Passwords, SSH private key contents, SSH private key **path** | Never included | The values never appear. A sanitized error may contain a `<redacted-ssh-key-path>` placeholder marking where the path was removed. |
 
 ## Adding a new field
 

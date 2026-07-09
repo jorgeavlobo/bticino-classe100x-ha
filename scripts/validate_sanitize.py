@@ -32,6 +32,9 @@ SANITIZE_PATH = (
 _spec = importlib.util.spec_from_file_location("bticino_sanitize", SANITIZE_PATH)
 assert _spec and _spec.loader
 sanitize = importlib.util.module_from_spec(_spec)
+# Register before executing so any future self-reference or module lookup during
+# import resolves correctly (dependency-free today, but a common footgun).
+sys.modules[_spec.name] = sanitize
 _spec.loader.exec_module(sanitize)
 
 HOSTNAME = "C1X-00-03-50-b6-5f-fb-f4055f96-88f5-4523-ad76-3b19bf29a581"
@@ -71,6 +74,7 @@ def main() -> int:
     check("hostname drops MAC", "00-03-50" not in (sanitized_hostname or ""))
     check("hostname drops UUID", "f4055f96" not in (sanitized_hostname or ""))
     check("bare hostname redacted", sanitize.sanitize_hostname("plainhost") == "<redacted-hostname>")
+    check("custom hyphenated hostname redacted", sanitize.sanitize_hostname("johns-house") == "<redacted-hostname>")
     check("no hostname stays None", sanitize.sanitize_hostname(None) is None)
 
     # Kernel: version kept, embedded node name removed (with and without hostname).
@@ -101,6 +105,10 @@ def main() -> int:
     check("error drops username", "root2" not in (sanitized_error or ""))
     check("error drops hostname", HOSTNAME not in (sanitized_error or ""))
     check("error keeps failure", "unreachable (timeout)" in (sanitized_error or ""))
+    # Placeholders are consistent with the rest of the module.
+    check("error host placeholder consistent", "<redacted-ipv4-address>" in (sanitized_error or ""))
+    check("error username placeholder consistent", "<redacted-username>" in (sanitized_error or ""))
+    check("error key-path placeholder consistent", "<redacted-ssh-key-path>" in (sanitized_error or ""))
     check("no error stays None", sanitize.sanitize_error(None, host="192.168.50.251") is None)
 
     # Prepared helpers for future fields.

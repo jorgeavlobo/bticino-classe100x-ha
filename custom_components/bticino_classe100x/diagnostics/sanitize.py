@@ -29,8 +29,14 @@ HOST_IPV4 = "<redacted-ipv4-address>"
 HOST_IPV6 = "<redacted-ipv6-address>"
 REDACTED_HOSTNAME = "<redacted-hostname>"
 REDACTED_USERNAME = "<redacted-username>"
+REDACTED_SSH_KEY_PATH = "<redacted-ssh-key-path>"
 REDACTED_UUID = "<redacted-uuid>"
 REDACTED_SERIAL_NUMBER = "<redacted-serial-number>"
+
+# Non-identifying model prefixes of the device hostname. Only these are kept by
+# ``sanitize_hostname``; any other (possibly user-chosen) prefix is redacted in
+# full so a customized hostname cannot leak.
+KNOWN_HOSTNAME_PREFIXES: tuple[str, ...] = ("C1X",)
 
 # ``uname -a`` prints "<sysname> <nodename> <release> …"; the node name (field 2)
 # is the device hostname, redacted even when the hostname itself is unknown.
@@ -90,15 +96,17 @@ def sanitize_hostname(hostname: str | None) -> str | None:
     Policy: **partial**. The CLASSE100X hostname embeds a MAC address and a
     generated UUID (for example ``C1X-00-03-50-b6-5f-fb-f4055f96-…``). The model
     prefix (``C1X``) is useful and not identifying, so it is kept while the rest
-    is redacted. A hostname without a separator is redacted in full.
+    is redacted. Only a known model prefix is kept — any other hostname (for
+    example a user-customized ``johns-house``) is redacted in full so a
+    user-chosen prefix cannot leak.
     """
     if not hostname:
         return hostname
 
     prefix, separator, _ = hostname.partition("-")
-    if not separator or not prefix:
-        return REDACTED_HOSTNAME
-    return f"{prefix}-<redacted>"
+    if separator and prefix.upper() in KNOWN_HOSTNAME_PREFIXES:
+        return f"{prefix}-<redacted>"
+    return REDACTED_HOSTNAME
 
 
 def sanitize_kernel(kernel: str | None, hostname: str | None = None) -> str | None:
@@ -143,10 +151,10 @@ def sanitize_error(
 
     result = error
     for value, placeholder in (
-        (ssh_key_path, "<ssh-key-path>"),
-        (hostname, "<hostname>"),
-        (host, "<host>"),
-        (username, "<username>"),
+        (ssh_key_path, REDACTED_SSH_KEY_PATH),
+        (hostname, REDACTED_HOSTNAME),
+        (host, sanitize_host(host)),
+        (username, REDACTED_USERNAME),
     ):
         if value:
             result = result.replace(value, placeholder)

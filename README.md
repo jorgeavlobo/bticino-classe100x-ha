@@ -131,10 +131,10 @@ maintenance policy and how to add a new language.
 ## Diagnostics
 
 The downloadable diagnostics file is designed to be safe to attach to public
-issues: installation-specific values (host, username, hostname, MAC) are
-redacted through a central sanitization layer, and passwords and SSH keys are
-never included. See [docs/Diagnostics.md](docs/Diagnostics.md) for the
-per-field privacy policy.
+issues: installation-specific values (host, username, hostname, MAC, the kernel
+string and the last-error text) are redacted through a central sanitization
+layer, and passwords and SSH keys are never included. See
+[docs/Diagnostics.md](docs/Diagnostics.md) for the per-field privacy policy.
 
 ## HomeKit
 
