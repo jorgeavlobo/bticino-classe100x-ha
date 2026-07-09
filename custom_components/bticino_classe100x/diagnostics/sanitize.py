@@ -42,6 +42,9 @@ KNOWN_HOSTNAME_PREFIXES: tuple[str, ...] = ("C1X",)
 # is the device hostname, redacted even when the hostname itself is unknown.
 _UNAME = re.compile(r"^(\S+)\s+(\S+)(.*)$", re.DOTALL)
 
+# A single MAC octet: exactly two hexadecimal digits.
+_MAC_BYTE = re.compile(r"^[0-9A-Fa-f]{2}$")
+
 
 def sanitize_host(host: str | None) -> str | None:
     """Redact a host, preserving only whether it is an IPv4/IPv6/hostname.
@@ -74,7 +77,8 @@ def sanitize_mac(mac_address: str | None) -> str | None:
 
     Policy: **partial**. Only the vendor prefix (OUI) is kept for debugging;
     the unique portion is hidden to avoid publishing a stable device identifier.
-    Accepts ``:`` or ``-`` separated MACs and leaves anything else untouched.
+    Accepts ``:`` or ``-`` separated MACs; any value that is not six two-digit
+    hex octets is left untouched.
     """
     if not mac_address:
         return mac_address
@@ -84,7 +88,7 @@ def sanitize_mac(mac_address: str | None) -> str | None:
         return mac_address
 
     parts = mac_address.split(separator)
-    if len(parts) != 6:
+    if len(parts) != 6 or not all(_MAC_BYTE.match(part) for part in parts):
         return mac_address
 
     return separator.join([*parts[:3], "**", "**", "**"])

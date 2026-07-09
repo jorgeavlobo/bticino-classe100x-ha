@@ -30,7 +30,8 @@ SANITIZE_PATH = (
 )
 
 _spec = importlib.util.spec_from_file_location("bticino_sanitize", SANITIZE_PATH)
-assert _spec and _spec.loader
+if _spec is None or _spec.loader is None:
+    raise SystemExit(f"could not load sanitize module from {SANITIZE_PATH}")
 sanitize = importlib.util.module_from_spec(_spec)
 # Register before executing so any future self-reference or module lookup during
 # import resolves correctly (dependency-free today, but a common footgun).
@@ -66,6 +67,8 @@ def main() -> int:
     check("MAC hyphen form", sanitize.sanitize_mac("00-03-50-b6-5f-fb") == "00-03-50-**-**-**")
     check("MAC device half hidden", "b6:5f:fb" not in (sanitize.sanitize_mac("00:03:50:b6:5f:fb") or ""))
     check("non-MAC untouched", sanitize.sanitize_mac("not-a-mac") == "not-a-mac")
+    check("6-part non-hex untouched", sanitize.sanitize_mac("no:ta:ma:ca:dd:re") == "no:ta:ma:ca:dd:re")
+    check("wrong-part-count untouched", sanitize.sanitize_mac("not:a:mac:addr:ess") == "not:a:mac:addr:ess")
     check("no MAC stays None", sanitize.sanitize_mac(None) is None)
 
     # Hostname: model prefix kept, MAC/UUID tail redacted.
