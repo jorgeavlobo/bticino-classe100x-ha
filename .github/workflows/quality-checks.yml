@@ -1,0 +1,98 @@
+name: Quality Checks
+
+# Single authoritative CI pipeline for the BTicino CLASSE100X integration.
+# Each quality check is an independent job so a failure immediately identifies
+# which check regressed. Future checks (linting, mypy, unit tests, coverage, …)
+# are added here as new jobs without redesigning the pipeline.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  # Nightly run catches drift in the pinned upstream actions (Hassfest, HACS)
+  # even when the repository itself has not changed.
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  translation-validation:
+    name: Translation Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Validate translation files against en.json
+        run: python3 tools/translations/validate_translations.py
+      - name: Self-test the translation validator
+        run: python3 scripts/validate_translations.py
+
+  json-validation:
+    name: JSON Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Validate every translation file is valid JSON
+        run: |
+          for file in custom_components/bticino_classe100x/translations/*.json; do
+            echo "Validating $file"
+            python3 -m json.tool "$file" > /dev/null
+          done
+
+  python-compilation:
+    name: Python Compilation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Compile all Python sources
+        run: python3 -m compileall custom_components
+
+  self-tests:
+    name: Self-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Health-check self-test
+        run: python3 scripts/validate_health_check.py
+      - name: Reference-scan self-test
+        run: python3 scripts/validate_reference_scan.py
+      - name: Diagnostics sanitization self-test
+        run: python3 scripts/validate_sanitize.py
+
+  hassfest:
+    name: Hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: HACS Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
+        with:
+          category: integration
