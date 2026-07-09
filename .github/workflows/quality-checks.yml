@@ -5,9 +5,10 @@ name: Quality Checks
 # which check regressed. Future checks (linting, mypy, unit tests, coverage, …)
 # are added here as new jobs without redesigning the pipeline.
 #
-# Third-party actions are pinned to full commit SHAs (with the human-readable
-# version in a trailing comment) for supply-chain safety and reproducible runs;
-# Dependabot keeps the pins current (see .github/dependabot.yml).
+# Third-party actions are pinned to full commit SHAs for supply-chain safety and
+# reproducible runs; the trailing comment records the tracked release tag, or the
+# branch for actions that publish no releases (home-assistant/actions). Dependabot
+# keeps the pins current (see .github/dependabot.yml).
 
 on:
   push:
