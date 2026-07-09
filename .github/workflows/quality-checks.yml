@@ -119,3 +119,29 @@ jobs:
       - uses: hacs/action@d556e736723344f83838d08488c983a15381059a # 22.5.0
         with:
           category: integration
+
+  # Aggregator gate: a single check that passes only when every quality job above
+  # succeeded. Require just this one check ("Quality Checks / Quality Gate") in
+  # branch protection — future jobs are covered by adding them to `needs`, with no
+  # branch-protection change needed. `if: always()` ensures the gate still runs
+  # (and fails red) when a dependency fails, rather than being skipped.
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs:
+      - translation-validation
+      - json-validation
+      - python-compilation
+      - self-tests
+      - hassfest
+      - hacs
+    if: always()
+    steps:
+      - name: Confirm every quality check succeeded
+        run: |
+          echo "Job results: ${{ join(needs.*.result, ', ') }}"
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}" = "true" ]; then
+            echo "::error::One or more quality checks did not succeed."
+            exit 1
+          fi
+          echo "All quality checks passed."
