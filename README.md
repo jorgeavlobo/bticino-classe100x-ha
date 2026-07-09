@@ -128,6 +128,14 @@ Italian. English is the authoritative source; a validator in CI keeps every
 language in sync. See [docs/Translations.md](docs/Translations.md) for the
 maintenance policy and how to add a new language.
 
+## Diagnostics
+
+The downloadable diagnostics file is designed to be safe to attach to public
+issues: installation-specific values (host, username, hostname, MAC, the kernel
+string and the last-error text) are redacted through a central sanitization
+layer, and passwords and SSH keys are never included. See
+[docs/Diagnostics.md](docs/Diagnostics.md) for the per-field privacy policy.
+
 ## HomeKit
 
 The recommended HomeKit setup is a YAML-defined HomeKit Bridge with explicit entity inclusion.

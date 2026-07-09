@@ -1,4 +1,20 @@
-"""Diagnostics support for BTicino CLASSE100X."""
+"""Diagnostics support for BTicino CLASSE100X.
+
+Diagnostics are designed to be safe to attach to public GitHub issues. Every
+installation-specific value is redacted through :mod:`.sanitize`; this module
+never redacts inline. The privacy policy for each field is:
+
+- **Visible** (safe to expose): integration/Home Assistant version, entity
+  count, platforms, entry title/id/version/source, auth method, the
+  ``*_configured``/``*_exists`` booleans, command timeout, release delay,
+  connection/coordinator status, test timestamps and results, firmware version,
+  OS release, uptime and the SSH/OpenWebNet latencies.
+- **Partially redacted**: MAC address (vendor OUI kept), hostname (model prefix
+  kept), kernel (version kept, node name dropped), last error (secrets removed).
+- **Fully redacted**: host (only the address family is kept) and username.
+- **Never included**: passwords, SSH private key contents and the private key
+  path.
+"""
 
 from __future__ import annotations
 
@@ -15,7 +31,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.loader import async_get_integration
 
-from .const import (
+from ..const import (
     AUTH_METHOD_SSH_KEY,
     CONF_AUTH_METHOD,
     CONF_COMMAND_TIMEOUT,
@@ -26,36 +42,14 @@ from .const import (
     DEFAULT_RELEASE_DELAY,
     DOMAIN,
 )
-
-
-def _sanitize_error(error: str | None, ssh_key_path: str | None) -> str | None:
-    """Redact the private key path from an error message.
-
-    Error strings can echo the SSH command, which includes the private key
-    path. The path itself is not needed for debugging, so it is replaced with a
-    placeholder while the rest of the message is kept.
-    """
-    if not error or not ssh_key_path:
-        return error
-
-    return error.replace(ssh_key_path, "<ssh_key_path>")
-
-
-def _redact_mac(mac_address: str | None) -> str | None:
-    """Mask the device-specific half of a MAC address.
-
-    Diagnostics are meant to be shared in issue reports, so only the vendor
-    prefix (OUI) is kept for debugging while the unique portion is hidden to
-    avoid publishing a stable device identifier.
-    """
-    if not mac_address:
-        return mac_address
-
-    parts = mac_address.split(":")
-    if len(parts) != 6:
-        return mac_address
-
-    return ":".join([*parts[:3], "**", "**", "**"])
+from .sanitize import (
+    sanitize_error,
+    sanitize_host,
+    sanitize_hostname,
+    sanitize_kernel,
+    sanitize_mac,
+    sanitize_username,
+)
 
 
 async def async_get_config_entry_diagnostics(
@@ -64,17 +58,20 @@ async def async_get_config_entry_diagnostics(
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry.
 
-    Only non-sensitive information is exposed: passwords, private key contents
-    and the private key path are never included, and the last error has the key
-    path redacted. The output degrades gracefully when the device is offline or
-    some device information is unavailable.
+    Only non-sensitive information is exposed. Installation-specific values are
+    redacted through :mod:`.sanitize`, and passwords and private key contents
+    are never included. The output degrades gracefully when the device is
+    offline or some device information is unavailable.
     """
     coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
 
     # Mirror the coordinator: options override the original config entry data,
-    # so read connection settings (and the key path used for redaction) from the
+    # so read connection settings (and the values used for redaction) from the
     # merged mapping to avoid reporting or leaking stale values.
     config = {**entry.data, **entry.options}
+
+    host = config.get(CONF_HOST)
+    username = config.get(CONF_USERNAME)
 
     ssh_key_path = config.get(CONF_SSH_KEY_PATH)
     ssh_key_exists = False
@@ -92,6 +89,7 @@ async def async_get_config_entry_diagnostics(
     platforms = sorted({entity.entity_id.split(".")[0] for entity in entities})
 
     device_information = getattr(coordinator, "device_information", None)
+    hostname = device_information.hostname if device_information else None
 
     return {
         "integration": {
@@ -108,8 +106,8 @@ async def async_get_config_entry_diagnostics(
             "source": entry.source,
         },
         "connection": {
-            "host": config.get(CONF_HOST),
-            "username": config.get(CONF_USERNAME),
+            "host": sanitize_host(host),
+            "username": sanitize_username(username),
             "auth_method": config.get(CONF_AUTH_METHOD, AUTH_METHOD_SSH_KEY),
             "ssh_key_configured": bool(ssh_key_path),
             "ssh_key_exists": ssh_key_exists,
@@ -133,7 +131,13 @@ async def async_get_config_entry_diagnostics(
                 coordinator.last_failed_test_time if coordinator else None
             ),
             "last_error": (
-                _sanitize_error(coordinator.last_error, ssh_key_path)
+                sanitize_error(
+                    coordinator.last_error,
+                    ssh_key_path=ssh_key_path,
+                    host=host,
+                    hostname=hostname,
+                    username=username,
+                )
                 if coordinator
                 else None
             ),
@@ -143,11 +147,15 @@ async def async_get_config_entry_diagnostics(
                 device_information.firmware_version if device_information else None
             ),
             "os_release": device_information.os_release if device_information else None,
-            "hostname": device_information.hostname if device_information else None,
-            "kernel": device_information.kernel if device_information else None,
+            "hostname": sanitize_hostname(hostname),
+            "kernel": (
+                sanitize_kernel(device_information.kernel, hostname)
+                if device_information
+                else None
+            ),
             "uptime": device_information.uptime if device_information else None,
             "mac_address": (
-                _redact_mac(device_information.mac_address)
+                sanitize_mac(device_information.mac_address)
                 if device_information
                 else None
             ),

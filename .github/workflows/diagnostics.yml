@@ -22,3 +22,5 @@ jobs:
         run: python3 scripts/validate_health_check.py
       - name: Run reference-scan self-test
         run: python3 scripts/validate_reference_scan.py
+      - name: Run diagnostics sanitization self-test
+        run: python3 scripts/validate_sanitize.py
