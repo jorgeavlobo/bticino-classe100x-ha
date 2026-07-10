@@ -8,7 +8,8 @@ never redacts inline. The privacy policy for each field is:
   count, platforms, entry title/id/version/source, auth method, the
   ``*_configured``/``*_exists`` booleans, command timeout, release delay,
   connection/coordinator status, test timestamps and results, firmware version,
-  OS release, uptime and the SSH/OpenWebNet latencies.
+  firmware build, model, installed package, OS release, uptime and the
+  SSH/OpenWebNet latencies.
 - **Partially redacted**: MAC address (vendor OUI kept), hostname (model prefix
   kept), kernel (version kept, node name dropped), last error (secrets removed).
 - **Fully redacted**: host (only the address family is kept) and username.
@@ -145,6 +146,13 @@ async def async_get_config_entry_diagnostics(
         "device_information": {
             "firmware_version": (
                 device_information.firmware_version if device_information else None
+            ),
+            "firmware_build": (
+                device_information.firmware_build if device_information else None
+            ),
+            "model": device_information.model if device_information else None,
+            "installed_package": (
+                device_information.installed_package if device_information else None
             ),
             "os_release": device_information.os_release if device_information else None,
             "hostname": sanitize_hostname(hostname),

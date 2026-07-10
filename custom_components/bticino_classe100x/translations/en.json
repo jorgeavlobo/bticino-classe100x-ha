@@ -82,6 +82,12 @@
       "firmware_version": {
         "name": "Firmware Version"
       },
+      "firmware_build": {
+        "name": "Firmware Build"
+      },
+      "installed_package": {
+        "name": "Installed Package"
+      },
       "os_release": {
         "name": "OS Release"
       },

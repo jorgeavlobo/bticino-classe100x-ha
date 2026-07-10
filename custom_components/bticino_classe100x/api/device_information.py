@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 import logging
 import re
 import time
@@ -21,7 +22,15 @@ class BticinoDeviceInformation:
     """Cached information about the BTicino CLASSE100X device."""
 
     hostname: str | None = None
+    # Semantic firmware version read from dbfiles_ws.xml (``ver_webserver``),
+    # e.g. "1.5.8" — this is what the device page shows as ``sw_version``.
     firmware_version: str | None = None
+    # Formatted build timestamp from /etc/version, e.g. "2025-05-22 06:43:30".
+    firmware_build: str | None = None
+    # Firmware family read from dbfiles_ws.xml (``webserver_type``), e.g. "C100X".
+    model: str | None = None
+    # Installed service pack read from dbfiles_ws.xml (``latest_sp``).
+    installed_package: str | None = None
     os_release: str | None = None
     kernel: str | None = None
     uptime: str | None = None
@@ -44,7 +53,9 @@ class BticinoDeviceInformationClient:
         output = self._execute_linux_command(
             "echo '__BTICINO_HOSTNAME__'; "
             "hostname; "
-            "echo '__BTICINO_FIRMWARE_VERSION__'; "
+            "echo '__BTICINO_DBFILES_WS__'; "
+            "cat /home/bticino/sp/dbfiles_ws.xml 2>/dev/null; "
+            "echo '__BTICINO_FIRMWARE_BUILD__'; "
             "cat /etc/version 2>/dev/null; "
             "echo '__BTICINO_OS_RELEASE__'; "
             "if [ -f /etc/os-release ]; then cat /etc/os-release; fi; "
@@ -61,9 +72,14 @@ class BticinoDeviceInformationClient:
 
         sections = self._parse_sections(output)
 
+        dbfiles_ws = sections.get("dbfiles_ws") or ""
+
         return BticinoDeviceInformation(
             hostname=self._clean_output(sections.get("hostname")),
-            firmware_version=self._clean_output(sections.get("firmware_version")),
+            firmware_version=self._extract_xml_tag(dbfiles_ws, "ver_webserver"),
+            firmware_build=self._format_build(sections.get("firmware_build")),
+            model=self._extract_xml_tag(dbfiles_ws, "webserver_type"),
+            installed_package=self._extract_xml_tag(dbfiles_ws, "latest_sp"),
             os_release=self._normalize_os_release(sections.get("os_release")),
             kernel=self._clean_output(sections.get("kernel")),
             uptime=self._clean_output(sections.get("uptime")),
@@ -93,7 +109,8 @@ class BticinoDeviceInformationClient:
 
         marker_map = {
             "__BTICINO_HOSTNAME__": "hostname",
-            "__BTICINO_FIRMWARE_VERSION__": "firmware_version",
+            "__BTICINO_DBFILES_WS__": "dbfiles_ws",
+            "__BTICINO_FIRMWARE_BUILD__": "firmware_build",
             "__BTICINO_OS_RELEASE__": "os_release",
             "__BTICINO_KERNEL__": "kernel",
             "__BTICINO_UPTIME__": "uptime",
@@ -192,3 +209,40 @@ class BticinoDeviceInformationClient:
             return None
 
         return cleaned
+
+    @staticmethod
+    def _extract_xml_tag(xml: str, tag: str) -> str | None:
+        """Extract the text of a single XML tag, or None if absent/empty.
+
+        ``dbfiles_ws.xml`` is declared ``ISO-8859-1`` and contains comments, so a
+        targeted, per-tag regex is simpler and more robust here than a full XML
+        parser. A missing tag or an empty value yields ``None`` so the integration
+        keeps working when the file or a tag is absent.
+        """
+        match = re.search(rf"<{tag}>\s*(.*?)\s*</{tag}>", xml)
+        if not match:
+            return None
+
+        return match.group(1).strip() or None
+
+    @staticmethod
+    def _format_build(raw: str | None) -> str | None:
+        """Format /etc/version (``YYYYMMDDHHMMSS``) as ``YYYY-MM-DD HH:MM:SS``.
+
+        Falls back to the raw value when it does not match the expected build
+        timestamp format, so an unexpected firmware revision never breaks the
+        collection.
+        """
+        if not raw:
+            return None
+
+        raw = raw.strip()
+        if not raw:
+            return None
+
+        try:
+            return datetime.strptime(raw, "%Y%m%d%H%M%S").strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+        except ValueError:
+            return raw

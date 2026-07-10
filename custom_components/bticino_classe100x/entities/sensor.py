@@ -129,6 +129,18 @@ SENSOR_DESCRIPTIONS: tuple[BticinoSensorDescription, ...] = (
         value_fn=lambda coordinator: coordinator.device_information.firmware_version,
     ),
     BticinoSensorDescription(
+        key="firmware_build",
+        icon="mdi:calendar-clock",
+        entity_registry_enabled_default=False,
+        value_fn=lambda coordinator: coordinator.device_information.firmware_build,
+    ),
+    BticinoSensorDescription(
+        key="installed_package",
+        icon="mdi:package-variant-closed",
+        entity_registry_enabled_default=False,
+        value_fn=lambda coordinator: coordinator.device_information.installed_package,
+    ),
+    BticinoSensorDescription(
         key="os_release",
         icon="mdi:linux",
         entity_registry_enabled_default=False,

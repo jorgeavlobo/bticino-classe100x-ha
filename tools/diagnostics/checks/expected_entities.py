@@ -143,6 +143,22 @@ EXPECTED_ENTITIES: tuple[ExpectedEntity, ...] = (
     ),
     ExpectedEntity(
         domain="sensor",
+        key="firmware_build",
+        unique_key="firmware_build",
+        entity_category="diagnostic",
+        original_icon="mdi:calendar-clock",
+        entity_registry_enabled_default=False,
+    ),
+    ExpectedEntity(
+        domain="sensor",
+        key="installed_package",
+        unique_key="installed_package",
+        entity_category="diagnostic",
+        original_icon="mdi:package-variant-closed",
+        entity_registry_enabled_default=False,
+    ),
+    ExpectedEntity(
+        domain="sensor",
         key="os_release",
         unique_key="os_release",
         entity_category="diagnostic",

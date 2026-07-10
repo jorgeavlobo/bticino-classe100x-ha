@@ -16,16 +16,28 @@ from .const import DOMAIN
 from .coordinator import BticinoClasse100xCoordinator
 
 DEVICE_MANUFACTURER = "BTicino"
-DEVICE_MODEL = "CLASSE100X"
+# Used only until the first successful poll reads the real model from the device
+# (``webserver_type`` in dbfiles_ws.xml). Kept so the device page still shows a
+# sensible model when the CLASSE100X is unreachable at startup.
+DEVICE_MODEL_FALLBACK = "CLASSE100X"
 DEVICE_NAME = "BTicino CLASSE100X"
 
 
 def _resolve_sw_version(
     coordinator: BticinoClasse100xCoordinator,
 ) -> str | None:
-    """Return the software version, falling back to the kernel string."""
+    """Return the software version.
+
+    Prefer the semantic firmware version (for example ``1.5.8``); fall back to
+    the formatted build timestamp, then to the raw kernel string, so the device
+    page still shows something useful before the first successful poll.
+    """
     device_information = coordinator.device_information
-    return device_information.firmware_version or device_information.kernel
+    return (
+        device_information.firmware_version
+        or device_information.firmware_build
+        or device_information.kernel
+    )
 
 
 def build_device_info(
@@ -44,11 +56,15 @@ def build_device_info(
     the device is unreachable) are omitted so the device page degrades
     gracefully instead of showing empty values.
     """
+    # Prefer the real model discovered from the device; fall back to the constant
+    # when the device has not been polled yet (for example offline at startup).
+    model = coordinator.device_information.model or DEVICE_MODEL_FALLBACK
+
     device_info = DeviceInfo(
         identifiers={(DOMAIN, host)},
         name=DEVICE_NAME,
         manufacturer=DEVICE_MANUFACTURER,
-        model=DEVICE_MODEL,
+        model=model,
         configuration_url=f"http://{host}",
     )
 
@@ -79,10 +95,11 @@ def async_update_device_registry(
     """Apply late-discovered device details to the device registry.
 
     Home Assistant reads ``device_info`` only when each entity is first added.
-    When the CLASSE100X is unreachable at startup, the MAC address and firmware
-    version are not yet known, so they are missing from the device page. Once a
-    later successful poll discovers them, update the existing device entry so the
-    information (and MAC-based correlation) appears without requiring a reload.
+    When the CLASSE100X is unreachable at startup, the MAC address, firmware
+    version and model are not yet known, so they are missing (or fall back to a
+    constant) on the device page. Once a later successful poll discovers them,
+    update the existing device entry so the information (and MAC-based
+    correlation) appears without requiring a reload.
 
     The update is idempotent: nothing is written when the registry already holds
     the current values.
@@ -111,6 +128,10 @@ def async_update_device_registry(
     sw_version = _resolve_sw_version(coordinator)
     if sw_version and device.sw_version != sw_version:
         changes["sw_version"] = sw_version
+
+    model = coordinator.device_information.model
+    if model and device.model != model:
+        changes["model"] = model
 
     if not changes:
         return
