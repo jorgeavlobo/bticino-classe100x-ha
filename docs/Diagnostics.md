@@ -14,7 +14,7 @@ dependency-free module,
 so the privacy policy has one testable home and future fields (serial numbers,
 UUIDs, …) reuse it instead of re-implementing redaction. Its behaviour is
 verified by [`scripts/validate_sanitize.py`](../scripts/validate_sanitize.py),
-which runs in the **Diagnostics** CI workflow.
+which runs in the **Quality Checks** CI workflow.
 
 ## Privacy policy per field
 

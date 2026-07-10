@@ -1,0 +1,147 @@
+name: Quality Checks
+
+# Single authoritative CI pipeline for the BTicino CLASSE100X integration.
+# Each quality check is an independent job so a failure immediately identifies
+# which check regressed. Future checks (linting, mypy, unit tests, coverage, …)
+# are added here as new jobs without redesigning the pipeline.
+#
+# Third-party actions are pinned to full commit SHAs for supply-chain safety; the
+# trailing comment records the tracked release tag, or the branch for actions that
+# publish no releases (home-assistant/actions). Dependabot keeps the pins current
+# (see .github/dependabot.yml).
+#
+# Caveat: the Hassfest and HACS jobs are official Home Assistant / HACS validators
+# whose actions run upstream-maintained container images (ghcr.io/...) that are
+# not digest-pinned. That is deliberate — these checks must validate against the
+# *current* HA/HACS requirements, and the images share the pinned actions' trust
+# boundary. The SHA pin still prevents a tampered action definition from running.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  # Nightly run re-validates the repository even when no code changed. It mainly
+  # exercises the HACS check, which fetches live repository metadata at runtime,
+  # so upstream/metadata regressions still surface between commits.
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  translation-validation:
+    name: Translation Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+      - name: Validate translation files against en.json
+        run: python3 tools/translations/validate_translations.py
+      - name: Self-test the translation validator
+        run: python3 scripts/validate_translations.py
+
+  json-validation:
+    name: JSON Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+      - name: Validate every translation file is valid JSON
+        shell: bash
+        run: |
+          shopt -s nullglob
+          files=(custom_components/bticino_classe100x/translations/*.json)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No translation files found under custom_components/bticino_classe100x/translations/" >&2
+            exit 1
+          fi
+          for file in "${files[@]}"; do
+            echo "Validating $file"
+            python3 -m json.tool "$file" > /dev/null
+          done
+
+  python-compilation:
+    name: Python Compilation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+      - name: Compile all Python sources
+        run: python3 -m compileall custom_components
+
+  self-tests:
+    name: Self-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+      - name: Health-check self-test
+        run: python3 scripts/validate_health_check.py
+      - name: Reference-scan self-test
+        run: python3 scripts/validate_reference_scan.py
+      - name: Diagnostics sanitization self-test
+        run: python3 scripts/validate_sanitize.py
+
+  hassfest:
+    name: Hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: home-assistant/actions/hassfest@f4ca6f671bd429efb108c0f2fa0ae8af0215986c # master
+
+  hacs:
+    name: HACS Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: hacs/action@d556e736723344f83838d08488c983a15381059a # 22.5.0
+        with:
+          category: integration
+
+  # Aggregator gate: a single check that passes only when every quality job above
+  # succeeded. Require just this one check ("Quality Checks / Quality Gate") in
+  # branch protection — future jobs are covered by adding them to `needs`, with no
+  # branch-protection change needed. `if: always()` ensures the gate still runs
+  # (and fails red) when a dependency fails, rather than being skipped.
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs:
+      - translation-validation
+      - json-validation
+      - python-compilation
+      - self-tests
+      - hassfest
+      - hacs
+    if: always()
+    steps:
+      - name: Confirm every quality check succeeded
+        run: |
+          echo "Job results: ${{ join(needs.*.result, ', ') }}"
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}" = "true" ]; then
+            echo "::error::One or more quality checks did not succeed."
+            exit 1
+          fi
+          echo "All quality checks passed."

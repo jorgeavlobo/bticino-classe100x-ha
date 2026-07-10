@@ -47,7 +47,7 @@ The self-test for the validator's own logic runs with:
 python3 scripts/validate_translations.py
 ```
 
-Both run automatically in the **Translations** GitHub Actions workflow.
+Both run automatically in the **Quality Checks** GitHub Actions workflow.
 
 ## Adding a new language
 
