@@ -243,14 +243,9 @@ Response frame = `f"*#{own_calc_pass(pw, nonce)}##"`.
 
 Structure: `WHO=8`, `WHAT=19` (press) / `WHAT=20` (release), `WHERE` = target (20 = gate, 21 = pedestrian on this install). Each actuation emits a press/release **pair**. WHERE values are **installation-specific** — other units may differ; discover per-install (§9).
 
-**Call / doorbell frames — ❓ UNVERIFIED.** No call occurred during monitoring, so these were never captured. Candidates from fquinto `constants.go`, **not confirmed here**:
-```
-*8*1#1#4#21*16##    # doorbell / call from entrance panel (candidate)
-*8*1#5#4#20*16##    # self-call: eye button activates camera (candidate)
-*8*2#5#4*16##       # answer / pick up (candidate)
-*8*3#1#4*416##      # hang up (candidate)
-```
-**Action:** capture these live (monitor session across a real ring → answer → hang-up) before mapping call entities.
+> During an active call, opening the gate emits an **extra** pair on `WHERE=4` alongside the `WHERE=20` pair: `*8*19*4## *8*19*20## *8*20*4## *8*20*20##`. ✅ DEVICE (captured while answering + opening). The `WHERE=20` pair is the gate; the `WHERE=4` pair appears only in the in-call context (purpose not fully decoded — §4.7).
+
+**Call / doorbell / video frames — now ✅ VERIFIED.** These were captured live across five contrasting tests (ring, auto-view, answer, open-during-call, hang-up). Full lifecycle, state machine, and the exterior/interior discriminator are documented in **§4.7**.
 
 ### 4.6 Sending a command (port 30006)
 
@@ -262,6 +257,103 @@ printf '*8*19*20##*8*20*20##' | timeout 2 nc 127.0.0.1 30006
 - **No authentication** on 30006 (it's localhost/trusted). No `*99*` handshake, no nonce. ✅ DEVICE.
 - Both gate (WHERE=20) and pedestrian (WHERE=21) confirmed. ✅ DEVICE.
 - Success is judged by the **ACK count**, not the shell exit code — `timeout` can force a non-zero exit even on success.
+
+### 4.7 Call & video signalling (full lifecycle)
+
+Captured live across **five contrasting tests** on this unit (✅ DEVICE), and cross-checked against the fquinto `constants.go` map (independent third-party captures, mostly on C300X — strong corroboration, **not** the official spec). Tests: (1) exterior ring, unanswered; (2) interior eye-button auto-view; (3) exterior ring → answer → open gate → hang-up; (4) eye toggle on/off; (5) eye → answer → hang-up. Reproduced frames are marked ✅; single-observation or repo-inferred meanings are marked ⚠️.
+
+#### 4.7.1 The exterior/interior discriminator: `#1` vs `#5`
+
+The single field that distinguishes a **real doorbell** from an **interior self-activation** is the segment after the WHAT in door-entry frames (✅ DEVICE, confirmed across 4+ tests):
+
+- `*8*X`**`#1`**`#4…` → **exterior** — the entrance panel (a real doorbell ring)
+- `*8*X`**`#5`**`#4…` → **interior** — self-activation (the eye/camera button)
+
+A parser that ignores this would fire "doorbell!" when the user merely turns on the screen. This is a load-bearing distinction.
+
+#### 4.7.2 Audio state machine — `*#8**35*V*0*0##` (the best single signal)
+
+The `V` field is a clean call-phase indicator, reproduced many times (✅ DEVICE):
+
+| `V` | Phase | Seen in |
+|-----|-------|---------|
+| `0` | idle / ended | end of every test |
+| `1` | initialising | start of every test |
+| `2` | ringing (exterior) | tests 1, 3 |
+| `3` | auto-view (interior, image only) | tests 2, 4, 5 |
+| `4` | ringing, continuation (exterior) | tests 1, 3 |
+| `6` | **in conversation (audio active)** | both answer tests (3, 5) |
+
+`V=6` is identical whether the call came from exterior (`#1`) or interior (`#5`) — so **state = "in conversation" is origin-independent**, while origin comes from the `#1`/`#5` discriminator. Two complementary signals.
+
+#### 4.7.3 Door-entry event frames (WHO=8) — verified both variants
+
+| Meaning | Exterior (`#1`) | Interior (`#5`) | Status |
+|---------|-----------------|-----------------|--------|
+| Call/session start | `*8*1#1#4#21*112##` | `*8*1#5#4#20*112##` | ✅ |
+| **Ring notification** | `*8*9#1#4*20##` | `*8*9#5#4*20##` | ✅ (fixed, no variable field) |
+| Answer (two-way) | `*8*2#1#4*112##` | `*8*2#5#4*112##` | ✅ |
+| Intercom active | `*8*100#1#4*20##` | `*8*100#5#4*20##` | ✅ |
+| Hang-up / end | `*8*3#1#4*4112##` | `*8*3#5#4*4112##` *or* `*8*3#5#4*420##` | ✅ (final field not decoded) |
+| Gate open (in-call) | `*8*19*20##`+`*8*20*20##` (+ `WHERE=4` pair) | — | ✅ |
+
+#### 4.7.4 Video subsystem (WHO=7) — signalling only; media is SIP/RTP
+
+WHO=7 carries video **signalling**; the actual media streams over SIP/RTP on the local ports named below — confirming (now empirically, ✅ DEVICE) that video does **not** travel over OpenWebNet.
+
+| Frame | Meaning | Status |
+|-------|---------|--------|
+| `*7*77#800#480#…#640#480#…*##` | stream parameters (resolutions 800×480 / 640×480) | ⚠️ inferred |
+| `*#7**20*BR*CO*CL*P4*P5##` (e.g. `*69*57*63*75*67`) | image config (brightness/contrast/colour…) | ✅ repo dim 20 |
+| `*7*220#0*##` | video display mode | ✅ `CmdVideoMode220` |
+| `*7*300#127#0#0#1#5002#1*##` | stream signalling — media to `127.0.0.1:5002` | ✅ repo pattern |
+| `*7*300#127#0#0#1#5007#0*##` | media to `127.0.0.1:5007` (`5007 = SIPMediaPort`) | ✅ repo |
+| `*7*72*##` | two-way video (during answer) | ✅ `CmdVideoTwoWay` |
+| `*7*73#1#100*##` / `*7*73#0#0*##` | display ON / OFF (screen state truth) | ✅ |
+| `*7*55*##` | stop video | ✅ `CmdVideoStop` |
+| `*7*219*##` | disconnect video | ✅ `CmdVideoDisconnect` |
+| `*7*0*##` | stop final | ✅ `CmdVideoStopFinal` |
+| `*7*74*##` | keepalive during conversation | ✅ `CmdVideoKeepalive` |
+| `*#7**31#V*P##` | volume (dim 31) | ⚠️ inferred |
+| `*7*70#2##`, `*7*58#…##`, `*7*59#8#0#0*##` | seen once each; `*7*59` ≈ floor doorbell (repo) | ⚠️ single obs |
+
+**Media ports:** `5002` and `5007` (the latter = `SIPMediaPort`). ✅ DEVICE.
+
+#### 4.7.5 Representative full sequence (exterior ring → answer → open gate → hang-up)
+
+```
+*#8**35*1*0*0##        audio init
+*8*1#1#4#21*112##      exterior call start (#1)
+*#8**35*2*0*0##        state: ringing
+*8*9#1#4*20##          RING NOTIFICATION (#1 exterior)   ← doorbell trigger
+*7*77 / *#7**20 / *7*220 / *7*300(:5002,:5007) / *7*73#1#100  video comes up
+*#8**35*4*0*0##        state: ringing (cont.)
+*#8**35*6*0*0##        state: IN CONVERSATION            ← answered
+*8*2#1#4*112##         answer (two-way)
+*8*100#1#4*20##        intercom active
+*7*72*##  *7*70#2##    two-way video
+*8*19*4## *8*19*20##   gate open press  (WHERE 4 + 20)   ← gate opened
+*8*20*4## *8*20*20##   gate open release
+*8*3#1#4*4112##        hang-up
+*#8**35*0*0*0##        state: idle                        ← call ended
+*7*74 / *7*55 / *7*219 / *7*0 / *7*73#0#0   video tears down
+```
+
+#### 4.7.6 Not decoded (honest)
+
+- **Hang-up final field:** `*4112` (most tests) vs `*420` (one interior teardown). No rule fits both; do not rely on it — use `WHAT=3` or state `V=0` instead.
+- **Composite WHERE structure** (`#1#4#21`, `#5#4#20`): field-level meaning unknown; matched by pattern, not parsed.
+- **`*8*40#5#4*20##`:** appeared once (test 4) during a rapid eye toggle and **did not reproduce** in later teardowns → treated as a **non-reproducible artefact**, not a reliable event. (Earlier draft mislabelled it "voice active"; retracted.)
+- **`*8*41`, `*7*58`, `*7*70`, `*7*59`:** single observations; meanings inferred from the repo, not confirmed.
+
+#### 4.7.7 CRITICAL parsing rule — match by pattern, never by exact frame
+
+Two independent reasons the event client must match on `WHO` + `WHAT` + a **substring** of WHERE, never the whole frame:
+
+1. **The identifier varies per installation.** This unit emits `…*112##`; the fquinto repo unit emits `…*16##`. Same event, different fixed ID. (Note: it is *stable within an installation* — it appeared identically across all five of this unit's tests — so it is an **install-specific constant, not a per-call random**. Either way, exact-frame matching breaks across installs.)
+2. **Composite WHERE has variable parts** and undecoded fields (4.7.6).
+
+Example: doorbell = `WHO==8 && WHAT=="9" && WHERE.contains("#1#4")`; auto-view = `… WHERE.contains("#5#4")`.
 
 ---
 
@@ -344,12 +436,13 @@ State this plainly in `SECURITY.md` rather than implying the channel is "secure"
 
 Tracked honestly so nobody mistakes them for solved:
 
-1. ❓ **Call/doorbell frames** (§4.5) — never captured; the highest-value gap for "listen".
+1. ✅ **Call/doorbell/video frames — now captured** (§4.7), across five contrasting tests. Remaining sub-gaps: multi-camera / multi-entrance cycling and inter-unit internal calls **do not exist on this single-panel / single-interior-unit installation**, so they can't be captured here; other installations may have them.
 2. ⚠️ **Sustained-session coexistence** — a *single* session works; a permanently-open monitor session coexisting with native processes over hours/days (and vs `MaxClient=50`) is **unproven**. Needs a soak test.
 3. ❓ **SSH idle survival > 5 min** — proven only to 5 minutes.
 4. ⚠️ **WiFi jitter** — measured 0% loss but 4–164 ms (avg ~69 ms), consistent with radio power-saving (inferred, not a direct RSSI reading). Size event-client timeouts for the worst case, not the average.
-5. ❓ **WHERE values are installation-specific** — gate=20 / pedestrian=21 is true *here*; other installs differ. The in-integration capture mode (issue #38 §7.6) is the mechanism for users to discover their own.
-6. ⚠️ **Netatmo migration** — this pre-2023 unit is not migratable per Legrand's 2023 statement; re-confirm if it matters (policy could change).
+5. ⚠️ **Install-specific values** — gate=20 / pedestrian=21, and the door-entry identifier (`112` here), are true *for this unit*; other installs differ (repo unit uses `16`). Match by pattern (§4.7.7). The in-integration capture mode (issue #38 §7.6) lets users discover their own.
+6. **Undecoded fields** (§4.7.6): hang-up final field, composite WHERE structure, and a few single-observation frames.
+7. ⚠️ **Netatmo migration** — this pre-2023 unit is not migratable per Legrand's 2023 statement; re-confirm if it matters (policy could change).
 
 ---
 
@@ -383,6 +476,15 @@ Listen : LAN → host:20000, OPEN auth (pw 12345), needs firewall rule
 Act    : SSH → nc 127.0.0.1 30006  (no auth), ACK per frame = *#*1##
          gate  : *8*19*20## + *8*20*20##
          pedes.: *8*19*21## + *8*20*21##
+Events : (match by pattern — WHO+WHAT+WHERE substring, NOT exact frame)
+         doorbell (exterior) : WHO8 WHAT9 WHERE~"#1#4"  (*8*9#1#4*20##)
+         auto-view (interior): WHO8 WHAT9 WHERE~"#5#4"  (*8*9#5#4*20##)
+         answered            : WHO8 WHAT2 ...  |  state *#8**35*6*0*0##
+         gate opened (heard) : *8*19*20##
+         ended               : WHO8 WHAT3 ...  |  state *#8**35*0*0*0##
+         call phase (truth)  : *#8**35*V*0*0##  V=0 idle,1 init,2/4 ring,3 auto-view,6 talk
+         screen on/off       : *7*73#1#100## / *7*73#0#0##
+         video media (SIP/RTP): 127.0.0.1:5002 & :5007  (NOT over OWN)
 Unlock : iptables -I INPUT -p tcp -s <HA_IP> --dport 20000 -j ACCEPT   (volatile; re-inject on reconnect)
 SSH    : root2 + key ; host key regenerates on reboot ; asyncssh 2.24.0 on defaults
 ```
