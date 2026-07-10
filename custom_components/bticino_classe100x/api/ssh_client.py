@@ -62,7 +62,16 @@ class BticinoSshClient:
                 check=True,
                 timeout=self.config.command_timeout,
                 capture_output=True,
+                # Decode as text but tolerate non-UTF-8 bytes: device files such
+                # as /home/bticino/sp/dbfiles_ws.xml are ISO-8859-1 and may carry
+                # bytes that are invalid UTF-8. With the default strict policy a
+                # single such byte raises UnicodeDecodeError from inside
+                # subprocess.run and aborts the entire collection; "replace" keeps
+                # the rest of the output (hostname, MAC, the ASCII XML values we
+                # parse, ...) intact.
                 text=True,
+                encoding="utf-8",
+                errors="replace",
             )
 
             _LOGGER.debug(

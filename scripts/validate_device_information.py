@@ -91,6 +91,7 @@ def main() -> int:
     checks: list[tuple[str, bool]] = []
 
     def check(label: str, passed: bool) -> None:
+        """Record one assertion result under a human-readable label."""
         checks.append((label, passed))
 
     # XML tag extraction: the three authoritative device fields.
