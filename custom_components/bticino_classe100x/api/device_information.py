@@ -51,15 +51,20 @@ class BticinoDeviceInformationClient:
         start_time = time.monotonic()
 
         output = self._execute_linux_command(
+            # A bare ``echo`` after every file dump prints a trailing newline so
+            # the next marker always starts on its own line. Without it, a file
+            # with no final newline (e.g. dbfiles_ws.xml) would glue its last
+            # line to the following marker, and _parse_sections() — which only
+            # matches a marker occupying a whole line — would drop that section.
             "echo '__BTICINO_HOSTNAME__'; "
             "hostname; "
             "echo '__BTICINO_DBFILES_WS__'; "
-            "cat /home/bticino/sp/dbfiles_ws.xml 2>/dev/null; "
+            "cat /home/bticino/sp/dbfiles_ws.xml 2>/dev/null; echo; "
             "echo '__BTICINO_FIRMWARE_BUILD__'; "
-            "cat /etc/version 2>/dev/null; "
+            "cat /etc/version 2>/dev/null; echo; "
             "echo '__BTICINO_OS_RELEASE__'; "
             "if [ -f /etc/os-release ]; then cat /etc/os-release; fi; "
-            "if [ -f /etc/issue ]; then cat /etc/issue; fi; "
+            "if [ -f /etc/issue ]; then cat /etc/issue; fi; echo; "
             "echo '__BTICINO_KERNEL__'; "
             "uname -a; "
             "echo '__BTICINO_UPTIME__'; "

@@ -71,15 +71,18 @@ DBFILES_WS = (
 def _device_output(dbfiles: str = DBFILES_WS, build: str = "20250522064330") -> str:
     """Build a marker-delimited SSH output like ``collect()`` parses.
 
-    An empty ``dbfiles`` models a failed ``cat`` (missing file): the two markers
-    end up consecutive with no content in between, exactly as on the device.
+    Mirrors the real command, which prints a bare ``echo`` (a lone newline) after
+    each file dump: the empty string after the dbfiles_ws.xml and /etc/version
+    content stands in for that newline. An empty ``dbfiles`` models a failed
+    ``cat`` (missing file) — the dump is empty but the newline, and thus the next
+    marker on its own line, is still emitted.
     """
     lines = ["__BTICINO_HOSTNAME__", "C1X-00-03-50-b6-5f-fb", "__BTICINO_DBFILES_WS__"]
     if dbfiles:
         lines.append(dbfiles)
+    lines.append("")  # bare echo after the dbfiles_ws.xml dump
+    lines += ["__BTICINO_FIRMWARE_BUILD__", build, ""]  # bare echo after /etc/version
     lines += [
-        "__BTICINO_FIRMWARE_BUILD__",
-        build,
         "__BTICINO_MAC_ADDRESSES__",
         "/sys/class/net/eth0/address=00:03:50:b6:5f:fb",
     ]
@@ -120,11 +123,28 @@ def main() -> int:
     check("end-to-end firmware version", Client._extract_xml_tag(sections.get("dbfiles_ws") or "", "ver_webserver") == "1.5.8")
     check("end-to-end build", Client._format_build(sections.get("firmware_build")) == "2025-05-22 06:43:30")
 
-    # Missing dbfiles_ws.xml (cat fails, no content): the section is absent, so
-    # extraction returns None and the integration keeps working.
+    # Missing dbfiles_ws.xml (cat fails, no content): extraction returns None and
+    # the integration keeps working; the firmware_build section still parses
+    # because the marker was not glued to the (empty) dump.
     empty = Client._parse_sections(_device_output(dbfiles=""))
-    check("missing dbfiles_ws section absent", empty.get("dbfiles_ws") is None)
-    check("missing dbfiles_ws yields None fields", Client._extract_xml_tag(empty.get("dbfiles_ws") or "", "ver_webserver") is None)
+    check("missing dbfiles_ws yields no firmware version", Client._extract_xml_tag(empty.get("dbfiles_ws") or "", "ver_webserver") is None)
+    check("missing dbfiles_ws still leaves firmware_build parseable", Client._format_build(empty.get("firmware_build")) == "2025-05-22 06:43:30")
+
+    # Regression (issue #37 review): a dbfiles_ws.xml with no trailing newline must
+    # not swallow the following marker. The command emits a bare echo after the
+    # dump; without that newline the marker glues onto the file's last line and
+    # _parse_sections() — which only matches a marker on its own line — drops the
+    # firmware_build section entirely.
+    one_line_xml = "<ver_webserver>1.5.8</ver_webserver>"
+    glued = "\n".join(
+        ["__BTICINO_DBFILES_WS__", one_line_xml + "__BTICINO_FIRMWARE_BUILD__", "20250522064330"]
+    )
+    guarded = "\n".join(
+        ["__BTICINO_DBFILES_WS__", one_line_xml, "", "__BTICINO_FIRMWARE_BUILD__", "20250522064330"]
+    )
+    check("glued marker (no newline) drops firmware_build", Client._parse_sections(glued).get("firmware_build") is None)
+    check("newline guard restores firmware_build", Client._parse_sections(guarded).get("firmware_build") == "20250522064330")
+    check("newline guard keeps firmware version parseable", Client._extract_xml_tag(Client._parse_sections(guarded).get("dbfiles_ws") or "", "ver_webserver") == "1.5.8")
 
     ok = True
     for label, passed in checks:
