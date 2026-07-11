@@ -41,7 +41,7 @@ to you — the Home Assistant-native way, described next.
 
 These two things look similar but are handled in completely different places:
 
-| | Controlled by | Translated by Home Assistant? |
+| Name type | Controlled by | Translated by Home Assistant? |
 |---|---|---|
 | **Entity name** (`translation_key`) | The integration, via the translation files | **Yes** — follows the Home Assistant UI language |
 | **Dashboard card name** (`name:`) | You, in the dashboard YAML | **No** — the string is static |
