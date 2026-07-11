@@ -16,6 +16,8 @@ This project is not affiliated with BTicino or Legrand.
 - SSH latency sensor
 - OpenWebNet latency sensor
 - Firmware version sensor
+- Firmware build sensor
+- Installed package sensor
 - OS release sensor
 - Hostname sensor
 - MAC address sensor
@@ -102,6 +104,8 @@ Default SSH key path:
 - SSH Latency
 - OpenWebNet Latency
 - Firmware Version
+- Firmware Build
+- Installed Package
 - OS Release
 - Uptime
 - Hostname

@@ -62,7 +62,17 @@ class BticinoSshClient:
                 check=True,
                 timeout=self.config.command_timeout,
                 capture_output=True,
+                # Decode as ISO-8859-1 (latin-1): it maps every byte to a
+                # character, so it never raises UnicodeDecodeError and never loses
+                # data. Device files such as /home/bticino/sp/dbfiles_ws.xml are
+                # ISO-8859-1, and the rest of the output is ASCII (a subset), so
+                # the whole response decodes faithfully. A strict UTF-8 decode
+                # would instead raise on a single non-UTF-8 byte and abort the
+                # entire collection (hostname, MAC, ...), not just the XML parse;
+                # utf-8 + errors="replace" would avoid the crash but corrupt those
+                # bytes into U+FFFD rather than preserving them.
                 text=True,
+                encoding="latin-1",
             )
 
             _LOGGER.debug(

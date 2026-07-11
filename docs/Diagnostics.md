@@ -26,7 +26,7 @@ which runs in the **Quality Checks** CI workflow.
 | Auth method, `*_configured` / `*_exists` booleans | Visible | Booleans and an enum only. |
 | Command timeout, release delay | Visible | User settings, not identifying. |
 | Connection / coordinator status, test times & results | Visible | Not identifying. |
-| Firmware version, OS release, uptime | Visible | Device software info, not identifying. |
+| Firmware version, firmware build, model, installed package, OS release, uptime | Visible | Device software info, not identifying. |
 | SSH / OpenWebNet latency | Visible | Not identifying. |
 | **MAC address** | Partially redacted | Vendor OUI kept; device half masked (`00:03:50:**:**:**`). |
 | **Hostname** | Partially redacted | Model prefix kept; MAC + UUID tail dropped (`C1X-<redacted>`). |

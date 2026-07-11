@@ -82,6 +82,12 @@
       "firmware_version": {
         "name": "Version du micrologiciel"
       },
+      "firmware_build": {
+        "name": "Build du micrologiciel"
+      },
+      "installed_package": {
+        "name": "Paquet installé"
+      },
       "os_release": {
         "name": "Version du système"
       },

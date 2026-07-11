@@ -82,6 +82,12 @@
       "firmware_version": {
         "name": "Versione firmware"
       },
+      "firmware_build": {
+        "name": "Build del firmware"
+      },
+      "installed_package": {
+        "name": "Pacchetto installato"
+      },
       "os_release": {
         "name": "Versione del sistema operativo"
       },
