@@ -1,0 +1,41 @@
+# BTicino CLASSE100X — example dashboard (English)
+# Card names are static: Home Assistant does not translate dashboard YAML, so the
+# labels below are chosen by you, not by the integration. See docs/Dashboard.md.
+title: BTicino CLASSE100X
+views:
+  - title: Intercom
+    cards:
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: tile
+            entity: button.bticino_classe100x_condominium_gate
+            name: Condominium Gate
+            icon: mdi:gate
+          - type: tile
+            entity: button.bticino_classe100x_pedestrian_door
+            name: Pedestrian Door
+            icon: mdi:door
+          - type: tile
+            entity: binary_sensor.bticino_classe100x_connection_status
+            name: Connection
+          - type: tile
+            entity: sensor.bticino_classe100x_health_status
+            name: Health
+
+      - type: entities
+        title: Diagnostics
+        entities:
+          - entity: button.bticino_classe100x_test_ssh_connection
+            name: Test connection
+          - entity: sensor.bticino_classe100x_ssh_latency
+            name: SSH Latency
+          - entity: sensor.bticino_classe100x_openwebnet_latency
+            name: OpenWebNet Latency
+          - entity: sensor.bticino_classe100x_last_test_result
+            name: Last Test Result
+          - entity: sensor.bticino_classe100x_last_successful_test
+            name: Last Successful Test
+          - entity: sensor.bticino_classe100x_last_failed_test
+            name: Last Failed Test
