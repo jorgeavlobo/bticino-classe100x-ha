@@ -120,10 +120,11 @@ Default SSH key path:
 Home Assistant builds entity names from the device name plus the entity name
 (for example `BTicino CLASSE100X Condominium Gate`), which can look long on Tile
 cards. To show short, dashboard-friendly names, override the card `name` in your
-dashboard YAML.
+dashboard YAML. Dashboard names are static — Home Assistant does not translate
+them — so ready-to-use examples are provided per language.
 
-See [docs/Dashboard.md](docs/Dashboard.md) for the rationale and a ready-to-use
-example dashboard.
+See [docs/Dashboard.md](docs/Dashboard.md) for the rationale and complete,
+localized example dashboards (English, Português, Français, Italiano, Deutsch).
 
 ## Translations
 

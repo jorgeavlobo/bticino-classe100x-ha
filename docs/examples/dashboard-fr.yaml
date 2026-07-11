@@ -1,0 +1,42 @@
+# BTicino CLASSE100X — tableau de bord d'exemple (Français)
+# Les noms des cartes sont statiques : Home Assistant ne traduit pas le YAML du
+# tableau de bord, les libellés ci-dessous sont donc choisis par vous, et non par
+# l'intégration. Voir docs/Dashboard.md.
+title: BTicino CLASSE100X
+views:
+  - title: Interphone
+    cards:
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: tile
+            entity: button.bticino_classe100x_condominium_gate
+            name: Portail de la copropriété
+            icon: mdi:gate
+          - type: tile
+            entity: button.bticino_classe100x_pedestrian_door
+            name: Porte piétonne
+            icon: mdi:door
+          - type: tile
+            entity: binary_sensor.bticino_classe100x_connection_status
+            name: Connexion
+          - type: tile
+            entity: sensor.bticino_classe100x_health_status
+            name: État général
+
+      - type: entities
+        title: Diagnostics
+        entities:
+          - entity: button.bticino_classe100x_test_ssh_connection
+            name: Tester la connexion
+          - entity: sensor.bticino_classe100x_ssh_latency
+            name: Latence SSH
+          - entity: sensor.bticino_classe100x_openwebnet_latency
+            name: Latence OpenWebNet
+          - entity: sensor.bticino_classe100x_last_test_result
+            name: Résultat du dernier test
+          - entity: sensor.bticino_classe100x_last_successful_test
+            name: Dernier test réussi
+          - entity: sensor.bticino_classe100x_last_failed_test
+            name: Dernier test échoué

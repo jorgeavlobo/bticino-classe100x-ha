@@ -1,0 +1,42 @@
+# BTicino CLASSE100X — Beispiel-Dashboard (Deutsch)
+# Kartennamen sind statisch: Home Assistant übersetzt das Dashboard-YAML nicht,
+# daher werden die folgenden Beschriftungen von Ihnen gewählt, nicht von der
+# Integration. Siehe docs/Dashboard.md.
+title: BTicino CLASSE100X
+views:
+  - title: Türsprechanlage
+    cards:
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: tile
+            entity: button.bticino_classe100x_condominium_gate
+            name: Gemeinschaftstor
+            icon: mdi:gate
+          - type: tile
+            entity: button.bticino_classe100x_pedestrian_door
+            name: Fußgängertür
+            icon: mdi:door
+          - type: tile
+            entity: binary_sensor.bticino_classe100x_connection_status
+            name: Verbindung
+          - type: tile
+            entity: sensor.bticino_classe100x_health_status
+            name: Zustand
+
+      - type: entities
+        title: Diagnose
+        entities:
+          - entity: button.bticino_classe100x_test_ssh_connection
+            name: Verbindung testen
+          - entity: sensor.bticino_classe100x_ssh_latency
+            name: SSH-Latenz
+          - entity: sensor.bticino_classe100x_openwebnet_latency
+            name: OpenWebNet-Latenz
+          - entity: sensor.bticino_classe100x_last_test_result
+            name: Letztes Testergebnis
+          - entity: sensor.bticino_classe100x_last_successful_test
+            name: Letzter erfolgreicher Test
+          - entity: sensor.bticino_classe100x_last_failed_test
+            name: Letzter fehlgeschlagener Test
